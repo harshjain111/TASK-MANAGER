@@ -114,45 +114,49 @@ export async function sendMessageAction(
     return { error: parsed.error.issues[0]?.message ?? 'Invalid input' };
   }
 
-  const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { error: 'You must be signed in.' };
+  try {
+    const supabase = createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return { error: 'You must be signed in.' };
 
-  const { error } = await supabase.from('chat_messages').insert({
-    column_id: parsed.data.columnId,
-    task_id: parsed.data.taskId ?? null,
-    author_id: user.id,
-    body: parsed.data.body,
-    message_type: 'text',
-  });
+    const { error } = await supabase.from('chat_messages').insert({
+      column_id: parsed.data.columnId,
+      task_id: parsed.data.taskId ?? null,
+      author_id: user.id,
+      body: parsed.data.body,
+      message_type: 'text',
+    });
 
-  if (error) return { error: error.message };
+    if (error) return { error: error.message };
 
-  // Mentions notify even past a muted column (P18) — mute only suppresses
-  // badge/toast delivery, never the underlying notification row.
-  const mentioned = (parsed.data.mentionedUserIds ?? []).filter((id) => id !== user.id);
-  if (mentioned.length > 0) {
-    const { data: orgId } = await supabase.rpc('get_project_org_id', { check_project_id: projectId });
-    if (orgId) {
-      await supabase.from('notifications').insert(
-        mentioned.map((userId) => ({
-          org_id: orgId,
-          user_id: userId,
-          type: 'mention',
-          payload: {
-            projectId,
-            columnId: parsed.data.columnId,
-            taskId: parsed.data.taskId ?? null,
-            body: parsed.data.body,
-          },
-        })),
-      );
+    // Mentions notify even past a muted column (P18) — mute only suppresses
+    // badge/toast delivery, never the underlying notification row.
+    const mentioned = (parsed.data.mentionedUserIds ?? []).filter((id) => id !== user.id);
+    if (mentioned.length > 0) {
+      const { data: orgId } = await supabase.rpc('get_project_org_id', { check_project_id: projectId });
+      if (orgId) {
+        await supabase.from('notifications').insert(
+          mentioned.map((userId) => ({
+            org_id: orgId,
+            user_id: userId,
+            type: 'mention',
+            payload: {
+              projectId,
+              columnId: parsed.data.columnId,
+              taskId: parsed.data.taskId ?? null,
+              body: parsed.data.body,
+            },
+          })),
+        );
+      }
     }
-  }
 
-  return { error: null };
+    return { error: null };
+  } catch {
+    return { error: 'Something went wrong. Please try again.' };
+  }
 }
 
 export async function sendAttachmentMessageAction(
@@ -162,23 +166,27 @@ export async function sendAttachmentMessageAction(
   isPhoto: boolean,
   taskId?: string,
 ): Promise<ActionResult> {
-  const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { error: 'You must be signed in.' };
+  try {
+    const supabase = createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return { error: 'You must be signed in.' };
 
-  const { error } = await supabase.from('chat_messages').insert({
-    column_id: columnId,
-    task_id: taskId ?? null,
-    author_id: user.id,
-    body: fileName,
-    attachment_url: fileUrl,
-    message_type: isPhoto ? 'photo' : 'file',
-  });
+    const { error } = await supabase.from('chat_messages').insert({
+      column_id: columnId,
+      task_id: taskId ?? null,
+      author_id: user.id,
+      body: fileName,
+      attachment_url: fileUrl,
+      message_type: isPhoto ? 'photo' : 'file',
+    });
 
-  if (error) return { error: error.message };
-  return { error: null };
+    if (error) return { error: error.message };
+    return { error: null };
+  } catch {
+    return { error: 'Something went wrong. Please try again.' };
+  }
 }
 
 export async function getColumnTasksAction(

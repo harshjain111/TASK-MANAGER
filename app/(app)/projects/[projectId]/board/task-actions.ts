@@ -93,34 +93,38 @@ export async function createQuickTaskAction(
     return { error: parsed.error.issues[0]?.message ?? 'Invalid input' };
   }
 
-  const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { error: 'You must be signed in.' };
+  try {
+    const supabase = createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return { error: 'You must be signed in.' };
 
-  const position = await nextTaskPosition(supabase, parsed.data.columnId);
+    const position = await nextTaskPosition(supabase, parsed.data.columnId);
 
-  const { data: task, error } = await supabase
-    .from('tasks')
-    .insert({
-      project_id: projectId,
-      column_id: parsed.data.columnId,
-      title: parsed.data.title,
-      position,
-      created_by: user.id,
-    })
-    .select('id')
-    .single();
+    const { data: task, error } = await supabase
+      .from('tasks')
+      .insert({
+        project_id: projectId,
+        column_id: parsed.data.columnId,
+        title: parsed.data.title,
+        position,
+        created_by: user.id,
+      })
+      .select('id')
+      .single();
 
-  if (error) return { error: error.message };
+    if (error) return { error: error.message };
 
-  const { error: assigneeError, doers } = await insertAssignees(supabase, task.id, user.id, []);
-  if (assigneeError) return { error: assigneeError.message };
-  await notifyAndLogTaskCreated(supabase, projectId, task.id, parsed.data.title, doers, user.id);
+    const { error: assigneeError, doers } = await insertAssignees(supabase, task.id, user.id, []);
+    if (assigneeError) return { error: assigneeError.message };
+    await notifyAndLogTaskCreated(supabase, projectId, task.id, parsed.data.title, doers, user.id);
 
-  revalidatePath(`/projects/${projectId}/board`);
-  return { error: null, taskId: task.id };
+    revalidatePath(`/projects/${projectId}/board`);
+    return { error: null, taskId: task.id };
+  } catch {
+    return { error: 'Something went wrong. Please try again.' };
+  }
 }
 
 type StatusActionResult = ActionResult & { appliedStatus?: TaskStatus };
@@ -131,105 +135,113 @@ export async function updateTaskStatusAction(
   fromStatus: TaskStatus,
   toStatus: TaskStatus,
 ): Promise<StatusActionResult> {
-  const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { error: 'You must be signed in.' };
+  try {
+    const supabase = createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return { error: 'You must be signed in.' };
 
-  // Delegated tasks (CLAUDE.md §1.2-§1.3): the assignee marking their work
-  // "done" doesn't close it outright — it lands in `review` for the
-  // delegator to Approve/Reopen (see approveTaskAction/reopenTaskAction).
-  let delegatorId: string | null = null;
-  let appliedStatus = toStatus;
-  if (toStatus === 'done') {
-    const { data: delegatorRow } = await supabase
-      .from('task_assignees')
-      .select('user_id')
-      .eq('task_id', taskId)
-      .eq('is_delegator', true)
-      .maybeSingle();
-    if (delegatorRow) {
-      delegatorId = delegatorRow.user_id;
-      appliedStatus = 'review';
+    // Delegated tasks (CLAUDE.md §1.2-§1.3): the assignee marking their work
+    // "done" doesn't close it outright — it lands in `review` for the
+    // delegator to Approve/Reopen (see approveTaskAction/reopenTaskAction).
+    let delegatorId: string | null = null;
+    let appliedStatus = toStatus;
+    if (toStatus === 'done') {
+      const { data: delegatorRow } = await supabase
+        .from('task_assignees')
+        .select('user_id')
+        .eq('task_id', taskId)
+        .eq('is_delegator', true)
+        .maybeSingle();
+      if (delegatorRow) {
+        delegatorId = delegatorRow.user_id;
+        appliedStatus = 'review';
+      }
     }
-  }
 
-  const { error } = await supabase.from('tasks').update({ status: appliedStatus }).eq('id', taskId);
-  if (error) return { error: error.message };
+    const { error } = await supabase.from('tasks').update({ status: appliedStatus }).eq('id', taskId);
+    if (error) return { error: error.message };
 
-  const { data: orgId } = await supabase.rpc('get_project_org_id', { check_project_id: projectId });
-  if (orgId) {
-    await supabase.from('activity_log').insert({
-      org_id: orgId,
-      actor_id: user.id,
-      entity_type: 'task',
-      entity_id: taskId,
-      action: 'status_changed',
-      metadata: { from: fromStatus, to: appliedStatus },
-    });
-
-    if (delegatorId && delegatorId !== user.id) {
-      const { data: task } = await supabase.from('tasks').select('title').eq('id', taskId).maybeSingle();
-      await supabase.from('notifications').insert({
+    const { data: orgId } = await supabase.rpc('get_project_org_id', { check_project_id: projectId });
+    if (orgId) {
+      await supabase.from('activity_log').insert({
         org_id: orgId,
-        user_id: delegatorId,
-        type: 'task_review',
-        payload: { taskId, taskTitle: task?.title, projectId },
+        actor_id: user.id,
+        entity_type: 'task',
+        entity_id: taskId,
+        action: 'status_changed',
+        metadata: { from: fromStatus, to: appliedStatus },
       });
-    }
-  }
 
-  revalidatePath(`/projects/${projectId}/board`);
-  revalidatePath('/home');
-  return { error: null, appliedStatus };
+      if (delegatorId && delegatorId !== user.id) {
+        const { data: task } = await supabase.from('tasks').select('title').eq('id', taskId).maybeSingle();
+        await supabase.from('notifications').insert({
+          org_id: orgId,
+          user_id: delegatorId,
+          type: 'task_review',
+          payload: { taskId, taskTitle: task?.title, projectId },
+        });
+      }
+    }
+
+    revalidatePath(`/projects/${projectId}/board`);
+    revalidatePath('/home');
+    return { error: null, appliedStatus };
+  } catch {
+    return { error: 'Something went wrong. Please try again.' };
+  }
 }
 
 export async function approveTaskAction(projectId: string, taskId: string): Promise<ActionResult> {
-  const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { error: 'You must be signed in.' };
+  try {
+    const supabase = createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return { error: 'You must be signed in.' };
 
-  const { data: task, error } = await supabase
-    .from('tasks')
-    .update({ status: 'done' })
-    .eq('id', taskId)
-    .select('title')
-    .single();
-  if (error) return { error: error.message };
+    const { data: task, error } = await supabase
+      .from('tasks')
+      .update({ status: 'done' })
+      .eq('id', taskId)
+      .select('title')
+      .single();
+    if (error) return { error: error.message };
 
-  const { data: orgId } = await supabase.rpc('get_project_org_id', { check_project_id: projectId });
-  if (orgId) {
-    await supabase.from('activity_log').insert({
-      org_id: orgId,
-      actor_id: user.id,
-      entity_type: 'task',
-      entity_id: taskId,
-      action: 'approved',
-      metadata: { title: task.title },
-    });
-
-    const { data: primary } = await supabase
-      .from('task_assignees')
-      .select('user_id')
-      .eq('task_id', taskId)
-      .eq('is_primary', true)
-      .maybeSingle();
-    if (primary && primary.user_id !== user.id) {
-      await supabase.from('notifications').insert({
+    const { data: orgId } = await supabase.rpc('get_project_org_id', { check_project_id: projectId });
+    if (orgId) {
+      await supabase.from('activity_log').insert({
         org_id: orgId,
-        user_id: primary.user_id,
-        type: 'task_approved',
-        payload: { taskId, taskTitle: task.title, projectId },
+        actor_id: user.id,
+        entity_type: 'task',
+        entity_id: taskId,
+        action: 'approved',
+        metadata: { title: task.title },
       });
-    }
-  }
 
-  revalidatePath(`/projects/${projectId}/board`);
-  revalidatePath('/home');
-  return { error: null };
+      const { data: primary } = await supabase
+        .from('task_assignees')
+        .select('user_id')
+        .eq('task_id', taskId)
+        .eq('is_primary', true)
+        .maybeSingle();
+      if (primary && primary.user_id !== user.id) {
+        await supabase.from('notifications').insert({
+          org_id: orgId,
+          user_id: primary.user_id,
+          type: 'task_approved',
+          payload: { taskId, taskTitle: task.title, projectId },
+        });
+      }
+    }
+
+    revalidatePath(`/projects/${projectId}/board`);
+    revalidatePath('/home');
+    return { error: null };
+  } catch {
+    return { error: 'Something went wrong. Please try again.' };
+  }
 }
 
 export async function reopenTaskAction(
@@ -241,58 +253,62 @@ export async function reopenTaskAction(
   const trimmed = comment.trim();
   if (!trimmed) return { error: 'A comment is required when reopening a task.' };
 
-  const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { error: 'You must be signed in.' };
+  try {
+    const supabase = createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return { error: 'You must be signed in.' };
 
-  const { data: task, error } = await supabase
-    .from('tasks')
-    .update({ status: 'in_progress' })
-    .eq('id', taskId)
-    .select('title')
-    .single();
-  if (error) return { error: error.message };
+    const { data: task, error } = await supabase
+      .from('tasks')
+      .update({ status: 'in_progress' })
+      .eq('id', taskId)
+      .select('title')
+      .single();
+    if (error) return { error: error.message };
 
-  await supabase.from('chat_messages').insert({
-    column_id: columnId,
-    task_id: taskId,
-    author_id: user.id,
-    body: trimmed,
-    message_type: 'text',
-  });
-
-  const { data: orgId } = await supabase.rpc('get_project_org_id', { check_project_id: projectId });
-  if (orgId) {
-    await supabase.from('activity_log').insert({
-      org_id: orgId,
-      actor_id: user.id,
-      entity_type: 'task',
-      entity_id: taskId,
-      action: 'reopened',
-      metadata: { title: task.title, comment: trimmed },
+    await supabase.from('chat_messages').insert({
+      column_id: columnId,
+      task_id: taskId,
+      author_id: user.id,
+      body: trimmed,
+      message_type: 'text',
     });
 
-    const { data: primary } = await supabase
-      .from('task_assignees')
-      .select('user_id')
-      .eq('task_id', taskId)
-      .eq('is_primary', true)
-      .maybeSingle();
-    if (primary && primary.user_id !== user.id) {
-      await supabase.from('notifications').insert({
+    const { data: orgId } = await supabase.rpc('get_project_org_id', { check_project_id: projectId });
+    if (orgId) {
+      await supabase.from('activity_log').insert({
         org_id: orgId,
-        user_id: primary.user_id,
-        type: 'task_reopened',
-        payload: { taskId, taskTitle: task.title, projectId },
+        actor_id: user.id,
+        entity_type: 'task',
+        entity_id: taskId,
+        action: 'reopened',
+        metadata: { title: task.title, comment: trimmed },
       });
-    }
-  }
 
-  revalidatePath(`/projects/${projectId}/board`);
-  revalidatePath('/home');
-  return { error: null };
+      const { data: primary } = await supabase
+        .from('task_assignees')
+        .select('user_id')
+        .eq('task_id', taskId)
+        .eq('is_primary', true)
+        .maybeSingle();
+      if (primary && primary.user_id !== user.id) {
+        await supabase.from('notifications').insert({
+          org_id: orgId,
+          user_id: primary.user_id,
+          type: 'task_reopened',
+          payload: { taskId, taskTitle: task.title, projectId },
+        });
+      }
+    }
+
+    revalidatePath(`/projects/${projectId}/board`);
+    revalidatePath('/home');
+    return { error: null };
+  } catch {
+    return { error: 'Something went wrong. Please try again.' };
+  }
 }
 
 /** Persists a drag-and-drop move: sets the moved task's column_id, then
@@ -306,31 +322,35 @@ export async function moveTaskAction(
   sourceColumnId?: string,
   sourceOrderedTaskIds?: string[],
 ): Promise<ActionResult> {
-  const supabase = createClient();
+  try {
+    const supabase = createClient();
 
-  const { error: columnError } = await supabase
-    .from('tasks')
-    .update({ column_id: destColumnId })
-    .eq('id', movedTaskId);
-  if (columnError) return { error: columnError.message };
+    const { error: columnError } = await supabase
+      .from('tasks')
+      .update({ column_id: destColumnId })
+      .eq('id', movedTaskId);
+    if (columnError) return { error: columnError.message };
 
-  const updates = [
-    ...destOrderedTaskIds.map((id, position) =>
-      supabase.from('tasks').update({ position }).eq('id', id),
-    ),
-    ...(sourceColumnId && sourceColumnId !== destColumnId
-      ? (sourceOrderedTaskIds ?? []).map((id, position) =>
-          supabase.from('tasks').update({ position }).eq('id', id),
-        )
-      : []),
-  ];
+    const updates = [
+      ...destOrderedTaskIds.map((id, position) =>
+        supabase.from('tasks').update({ position }).eq('id', id),
+      ),
+      ...(sourceColumnId && sourceColumnId !== destColumnId
+        ? (sourceOrderedTaskIds ?? []).map((id, position) =>
+            supabase.from('tasks').update({ position }).eq('id', id),
+          )
+        : []),
+    ];
 
-  const results = await Promise.all(updates);
-  const failed = results.find((r) => r.error);
-  if (failed?.error) return { error: failed.error.message };
+    const results = await Promise.all(updates);
+    const failed = results.find((r) => r.error);
+    if (failed?.error) return { error: failed.error.message };
 
-  revalidatePath(`/projects/${projectId}/board`);
-  return { error: null };
+    revalidatePath(`/projects/${projectId}/board`);
+    return { error: null };
+  } catch {
+    return { error: 'Something went wrong. Please try again.' };
+  }
 }
 
 export async function createTaskAction(
@@ -343,42 +363,46 @@ export async function createTaskAction(
   }
   const { columnId, title, description, assigneeIds, dueAt, priority, checklist } = parsed.data;
 
-  const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { error: 'You must be signed in.' };
+  try {
+    const supabase = createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return { error: 'You must be signed in.' };
 
-  const position = await nextTaskPosition(supabase, columnId);
+    const position = await nextTaskPosition(supabase, columnId);
 
-  const { data: task, error } = await supabase
-    .from('tasks')
-    .insert({
-      project_id: projectId,
-      column_id: columnId,
-      title,
-      description: description || null,
-      due_at: dueAt || null,
-      priority,
-      position,
-      created_by: user.id,
-    })
-    .select('id')
-    .single();
+    const { data: task, error } = await supabase
+      .from('tasks')
+      .insert({
+        project_id: projectId,
+        column_id: columnId,
+        title,
+        description: description || null,
+        due_at: dueAt || null,
+        priority,
+        position,
+        created_by: user.id,
+      })
+      .select('id')
+      .single();
 
-  if (error) return { error: error.message };
+    if (error) return { error: error.message };
 
-  const { error: assigneeError, doers } = await insertAssignees(supabase, task.id, user.id, assigneeIds);
-  if (assigneeError) return { error: assigneeError.message };
-  await notifyAndLogTaskCreated(supabase, projectId, task.id, title, doers, user.id);
+    const { error: assigneeError, doers } = await insertAssignees(supabase, task.id, user.id, assigneeIds);
+    if (assigneeError) return { error: assigneeError.message };
+    await notifyAndLogTaskCreated(supabase, projectId, task.id, title, doers, user.id);
 
-  if (checklist.length > 0) {
-    const { error: checklistError } = await supabase.from('task_checklist_items').insert(
-      checklist.map((label, position) => ({ task_id: task.id, label, position })),
-    );
-    if (checklistError) return { error: checklistError.message };
+    if (checklist.length > 0) {
+      const { error: checklistError } = await supabase.from('task_checklist_items').insert(
+        checklist.map((label, position) => ({ task_id: task.id, label, position })),
+      );
+      if (checklistError) return { error: checklistError.message };
+    }
+
+    revalidatePath(`/projects/${projectId}/board`);
+    return { error: null, taskId: task.id };
+  } catch {
+    return { error: 'Something went wrong. Please try again.' };
   }
-
-  revalidatePath(`/projects/${projectId}/board`);
-  return { error: null, taskId: task.id };
 }

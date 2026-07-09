@@ -23,18 +23,22 @@ export async function getDigestOptOutAction(): Promise<boolean> {
 }
 
 export async function setDigestOptOutAction(optOut: boolean): Promise<{ error: string | null }> {
-  const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { error: 'You must be signed in.' };
+  try {
+    const supabase = createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return { error: 'You must be signed in.' };
 
-  const { error } = await supabase
-    .from('profiles')
-    .update({ digest_opt_out: optOut })
-    .eq('id', user.id);
+    const { error } = await supabase
+      .from('profiles')
+      .update({ digest_opt_out: optOut })
+      .eq('id', user.id);
 
-  if (error) return { error: error.message };
-  revalidatePath('/admin');
-  return { error: null };
+    if (error) return { error: error.message };
+    revalidatePath('/admin');
+    return { error: null };
+  } catch {
+    return { error: 'Something went wrong. Please try again.' };
+  }
 }

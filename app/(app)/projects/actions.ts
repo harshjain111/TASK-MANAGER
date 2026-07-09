@@ -12,17 +12,21 @@ export async function createProjectAction(input: CreateProjectInput): Promise<Ac
     return { error: parsed.error.issues[0]?.message ?? 'Invalid input' };
   }
 
-  const supabase = createClient();
-  const { data, error } = await supabase.rpc('create_project', {
-    project_name: parsed.data.name,
-    project_cover_color: parsed.data.coverColor,
-    initial_member_ids: parsed.data.memberIds,
-  });
+  try {
+    const supabase = createClient();
+    const { data, error } = await supabase.rpc('create_project', {
+      project_name: parsed.data.name,
+      project_cover_color: parsed.data.coverColor,
+      initial_member_ids: parsed.data.memberIds,
+    });
 
-  if (error) {
-    return { error: error.message };
+    if (error) {
+      return { error: error.message };
+    }
+
+    revalidatePath('/projects');
+    return { error: null, projectId: data };
+  } catch {
+    return { error: 'Something went wrong. Please try again.' };
   }
-
-  revalidatePath('/projects');
-  return { error: null, projectId: data };
 }

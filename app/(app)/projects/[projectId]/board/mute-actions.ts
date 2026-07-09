@@ -27,47 +27,55 @@ export async function getMuteStateAction(projectId: string): Promise<MuteState> 
 }
 
 export async function toggleProjectMuteAction(projectId: string): Promise<{ muted: boolean }> {
-  const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { muted: false };
+  try {
+    const supabase = createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return { muted: false };
 
-  const { data: existing } = await supabase
-    .from('mutes')
-    .select('id')
-    .eq('user_id', user.id)
-    .eq('project_id', projectId)
-    .maybeSingle();
+    const { data: existing } = await supabase
+      .from('mutes')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('project_id', projectId)
+      .maybeSingle();
 
-  if (existing) {
-    await supabase.from('mutes').delete().eq('id', existing.id);
+    if (existing) {
+      await supabase.from('mutes').delete().eq('id', existing.id);
+      return { muted: false };
+    }
+
+    await supabase.from('mutes').insert({ user_id: user.id, project_id: projectId });
+    return { muted: true };
+  } catch {
     return { muted: false };
   }
-
-  await supabase.from('mutes').insert({ user_id: user.id, project_id: projectId });
-  return { muted: true };
 }
 
 export async function toggleColumnMuteAction(columnId: string): Promise<{ muted: boolean }> {
-  const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { muted: false };
+  try {
+    const supabase = createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return { muted: false };
 
-  const { data: existing } = await supabase
-    .from('mutes')
-    .select('id')
-    .eq('user_id', user.id)
-    .eq('column_id', columnId)
-    .maybeSingle();
+    const { data: existing } = await supabase
+      .from('mutes')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('column_id', columnId)
+      .maybeSingle();
 
-  if (existing) {
-    await supabase.from('mutes').delete().eq('id', existing.id);
+    if (existing) {
+      await supabase.from('mutes').delete().eq('id', existing.id);
+      return { muted: false };
+    }
+
+    await supabase.from('mutes').insert({ user_id: user.id, column_id: columnId });
+    return { muted: true };
+  } catch {
     return { muted: false };
   }
-
-  await supabase.from('mutes').insert({ user_id: user.id, column_id: columnId });
-  return { muted: true };
 }

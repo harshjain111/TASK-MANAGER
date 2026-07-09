@@ -116,19 +116,23 @@ export async function updateTaskDetailsAction(
   taskId: string,
   fields: { description?: string; dueAt?: string | null; priority?: TaskPriority },
 ): Promise<ActionResult> {
-  const supabase = createClient();
-  const { error } = await supabase
-    .from('tasks')
-    .update({
-      ...(fields.description !== undefined ? { description: fields.description || null } : {}),
-      ...(fields.dueAt !== undefined ? { due_at: fields.dueAt || null } : {}),
-      ...(fields.priority !== undefined ? { priority: fields.priority } : {}),
-    })
-    .eq('id', taskId);
+  try {
+    const supabase = createClient();
+    const { error } = await supabase
+      .from('tasks')
+      .update({
+        ...(fields.description !== undefined ? { description: fields.description || null } : {}),
+        ...(fields.dueAt !== undefined ? { due_at: fields.dueAt || null } : {}),
+        ...(fields.priority !== undefined ? { priority: fields.priority } : {}),
+      })
+      .eq('id', taskId);
 
-  if (error) return { error: error.message };
-  revalidatePath(`/projects/${projectId}/board`);
-  return { error: null };
+    if (error) return { error: error.message };
+    revalidatePath(`/projects/${projectId}/board`);
+    return { error: null };
+  } catch {
+    return { error: 'Something went wrong. Please try again.' };
+  }
 }
 
 export async function addChecklistItemAction(
@@ -136,22 +140,26 @@ export async function addChecklistItemAction(
   taskId: string,
   label: string,
 ): Promise<ActionResult> {
-  const supabase = createClient();
-  const { data } = await supabase
-    .from('task_checklist_items')
-    .select('position')
-    .eq('task_id', taskId)
-    .order('position', { ascending: false })
-    .limit(1);
-  const position = (data?.[0]?.position ?? -1) + 1;
+  try {
+    const supabase = createClient();
+    const { data } = await supabase
+      .from('task_checklist_items')
+      .select('position')
+      .eq('task_id', taskId)
+      .order('position', { ascending: false })
+      .limit(1);
+    const position = (data?.[0]?.position ?? -1) + 1;
 
-  const { error } = await supabase
-    .from('task_checklist_items')
-    .insert({ task_id: taskId, label, position });
+    const { error } = await supabase
+      .from('task_checklist_items')
+      .insert({ task_id: taskId, label, position });
 
-  if (error) return { error: error.message };
-  revalidatePath(`/projects/${projectId}/board`);
-  return { error: null };
+    if (error) return { error: error.message };
+    revalidatePath(`/projects/${projectId}/board`);
+    return { error: null };
+  } catch {
+    return { error: 'Something went wrong. Please try again.' };
+  }
 }
 
 export async function toggleChecklistItemAction(
@@ -159,44 +167,56 @@ export async function toggleChecklistItemAction(
   itemId: string,
   isDone: boolean,
 ): Promise<ActionResult> {
-  const supabase = createClient();
-  const { error } = await supabase
-    .from('task_checklist_items')
-    .update({ is_done: isDone })
-    .eq('id', itemId);
+  try {
+    const supabase = createClient();
+    const { error } = await supabase
+      .from('task_checklist_items')
+      .update({ is_done: isDone })
+      .eq('id', itemId);
 
-  if (error) return { error: error.message };
-  revalidatePath(`/projects/${projectId}/board`);
-  return { error: null };
+    if (error) return { error: error.message };
+    revalidatePath(`/projects/${projectId}/board`);
+    return { error: null };
+  } catch {
+    return { error: 'Something went wrong. Please try again.' };
+  }
 }
 
 export async function removeChecklistItemAction(
   projectId: string,
   itemId: string,
 ): Promise<ActionResult> {
-  const supabase = createClient();
-  const { error } = await supabase.from('task_checklist_items').delete().eq('id', itemId);
+  try {
+    const supabase = createClient();
+    const { error } = await supabase.from('task_checklist_items').delete().eq('id', itemId);
 
-  if (error) return { error: error.message };
-  revalidatePath(`/projects/${projectId}/board`);
-  return { error: null };
+    if (error) return { error: error.message };
+    revalidatePath(`/projects/${projectId}/board`);
+    return { error: null };
+  } catch {
+    return { error: 'Something went wrong. Please try again.' };
+  }
 }
 
 export async function reorderChecklistItemsAction(
   projectId: string,
   orderedItemIds: string[],
 ): Promise<ActionResult> {
-  const supabase = createClient();
-  const results = await Promise.all(
-    orderedItemIds.map((id, position) =>
-      supabase.from('task_checklist_items').update({ position }).eq('id', id),
-    ),
-  );
-  const failed = results.find((r) => r.error);
-  if (failed?.error) return { error: failed.error.message };
+  try {
+    const supabase = createClient();
+    const results = await Promise.all(
+      orderedItemIds.map((id, position) =>
+        supabase.from('task_checklist_items').update({ position }).eq('id', id),
+      ),
+    );
+    const failed = results.find((r) => r.error);
+    if (failed?.error) return { error: failed.error.message };
 
-  revalidatePath(`/projects/${projectId}/board`);
-  return { error: null };
+    revalidatePath(`/projects/${projectId}/board`);
+    return { error: null };
+  } catch {
+    return { error: 'Something went wrong. Please try again.' };
+  }
 }
 
 export async function updateAssigneesAction(
@@ -204,42 +224,46 @@ export async function updateAssigneesAction(
   taskId: string,
   assigneeIds: string[],
 ): Promise<ActionResult> {
-  const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { error: 'You must be signed in.' };
+  try {
+    const supabase = createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return { error: 'You must be signed in.' };
 
-  // Replace the "doer" rows only — leave any is_delegator row untouched.
-  const { error: deleteError } = await supabase
-    .from('task_assignees')
-    .delete()
-    .eq('task_id', taskId)
-    .eq('is_delegator', false);
-  if (deleteError) return { error: deleteError.message };
+    // Replace the "doer" rows only — leave any is_delegator row untouched.
+    const { error: deleteError } = await supabase
+      .from('task_assignees')
+      .delete()
+      .eq('task_id', taskId)
+      .eq('is_delegator', false);
+    if (deleteError) return { error: deleteError.message };
 
-  if (assigneeIds.length > 0) {
-    const { error: insertError } = await supabase.from('task_assignees').insert(
-      assigneeIds.map((userId, index) => ({
-        task_id: taskId,
-        user_id: userId,
-        is_primary: index === 0,
-        is_delegator: false,
-      })),
-    );
-    if (insertError) return { error: insertError.message };
+    if (assigneeIds.length > 0) {
+      const { error: insertError } = await supabase.from('task_assignees').insert(
+        assigneeIds.map((userId, index) => ({
+          task_id: taskId,
+          user_id: userId,
+          is_primary: index === 0,
+          is_delegator: false,
+        })),
+      );
+      if (insertError) return { error: insertError.message };
 
-    const [{ data: task }, { data: orgId }] = await Promise.all([
-      supabase.from('tasks').select('title').eq('id', taskId).maybeSingle(),
-      supabase.rpc('get_project_org_id', { check_project_id: projectId }),
-    ]);
-    if (task && orgId) {
-      await notifyTaskAssigned(supabase, orgId, taskId, task.title, projectId, assigneeIds, user.id);
+      const [{ data: task }, { data: orgId }] = await Promise.all([
+        supabase.from('tasks').select('title').eq('id', taskId).maybeSingle(),
+        supabase.rpc('get_project_org_id', { check_project_id: projectId }),
+      ]);
+      if (task && orgId) {
+        await notifyTaskAssigned(supabase, orgId, taskId, task.title, projectId, assigneeIds, user.id);
+      }
     }
-  }
 
-  revalidatePath(`/projects/${projectId}/board`);
-  return { error: null };
+    revalidatePath(`/projects/${projectId}/board`);
+    return { error: null };
+  } catch {
+    return { error: 'Something went wrong. Please try again.' };
+  }
 }
 
 export async function addTaskCommentAction(
@@ -248,23 +272,27 @@ export async function addTaskCommentAction(
   columnId: string,
   body: string,
 ): Promise<ActionResult> {
-  const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { error: 'You must be signed in.' };
+  try {
+    const supabase = createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return { error: 'You must be signed in.' };
 
-  const { error } = await supabase.from('chat_messages').insert({
-    task_id: taskId,
-    column_id: columnId,
-    author_id: user.id,
-    body,
-    message_type: 'text',
-  });
+    const { error } = await supabase.from('chat_messages').insert({
+      task_id: taskId,
+      column_id: columnId,
+      author_id: user.id,
+      body,
+      message_type: 'text',
+    });
 
-  if (error) return { error: error.message };
-  revalidatePath(`/projects/${projectId}/board`);
-  return { error: null };
+    if (error) return { error: error.message };
+    revalidatePath(`/projects/${projectId}/board`);
+    return { error: null };
+  } catch {
+    return { error: 'Something went wrong. Please try again.' };
+  }
 }
 
 export async function addTaskAttachmentAction(
@@ -274,21 +302,25 @@ export async function addTaskAttachmentAction(
   fileUrl: string,
   fileSize: number,
 ): Promise<ActionResult> {
-  const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { error: 'You must be signed in.' };
+  try {
+    const supabase = createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return { error: 'You must be signed in.' };
 
-  const { error } = await supabase.from('task_attachments').insert({
-    task_id: taskId,
-    uploaded_by: user.id,
-    file_name: fileName,
-    file_url: fileUrl,
-    file_size: fileSize,
-  });
+    const { error } = await supabase.from('task_attachments').insert({
+      task_id: taskId,
+      uploaded_by: user.id,
+      file_name: fileName,
+      file_url: fileUrl,
+      file_size: fileSize,
+    });
 
-  if (error) return { error: error.message };
-  revalidatePath(`/projects/${projectId}/board`);
-  return { error: null };
+    if (error) return { error: error.message };
+    revalidatePath(`/projects/${projectId}/board`);
+    return { error: null };
+  } catch {
+    return { error: 'Something went wrong. Please try again.' };
+  }
 }

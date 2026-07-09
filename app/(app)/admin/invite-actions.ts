@@ -19,40 +19,48 @@ export async function createInviteAction(input: InviteInput): Promise<ActionResu
     return { error: 'Only owners/admins can invite teammates.' };
   }
 
-  const supabase = createClient();
-  const { data, error } = await supabase
-    .from('org_invites')
-    .insert({
-      org_id: membership.orgId,
-      email: parsed.data.email,
-      org_role: parsed.data.role,
-      invited_by: membership.userId,
-    })
-    .select('token')
-    .single();
+  try {
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .from('org_invites')
+      .insert({
+        org_id: membership.orgId,
+        email: parsed.data.email,
+        org_role: parsed.data.role,
+        invited_by: membership.userId,
+      })
+      .select('token')
+      .single();
 
-  if (error) {
-    return { error: error.message };
+    if (error) {
+      return { error: error.message };
+    }
+
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000';
+    const inviteLink = `${siteUrl}/signup?invite=${data.token}`;
+
+    await sendEmail({
+      to: parsed.data.email,
+      subject: `You're invited to join ${membership.orgName} on Flowdesk`,
+      html: `<p>You've been invited to join <strong>${membership.orgName}</strong> on Flowdesk as ${parsed.data.role}.</p><p><a href="${inviteLink}">Accept invite</a></p>`,
+    });
+
+    revalidatePath('/admin');
+    return { error: null, inviteLink };
+  } catch {
+    return { error: 'Something went wrong. Please try again.' };
   }
-
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000';
-  const inviteLink = `${siteUrl}/signup?invite=${data.token}`;
-
-  await sendEmail({
-    to: parsed.data.email,
-    subject: `You're invited to join ${membership.orgName} on Flowdesk`,
-    html: `<p>You've been invited to join <strong>${membership.orgName}</strong> on Flowdesk as ${parsed.data.role}.</p><p><a href="${inviteLink}">Accept invite</a></p>`,
-  });
-
-  revalidatePath('/admin');
-  return { error: null, inviteLink };
 }
 
 export async function revokeInviteAction(inviteId: string): Promise<ActionResult> {
-  const supabase = createClient();
-  const { error } = await supabase.from('org_invites').delete().eq('id', inviteId);
-  if (error) return { error: error.message };
+  try {
+    const supabase = createClient();
+    const { error } = await supabase.from('org_invites').delete().eq('id', inviteId);
+    if (error) return { error: error.message };
 
-  revalidatePath('/admin');
-  return { error: null };
+    revalidatePath('/admin');
+    return { error: null };
+  } catch {
+    return { error: 'Something went wrong. Please try again.' };
+  }
 }

@@ -29,27 +29,31 @@ export async function createKarmaAction(input: CreateKarmaInput): Promise<Action
   const membership = await getCurrentOrgMembership();
   if (!membership) return { error: 'You must belong to an organization.' };
 
-  const supabase = createClient();
-  const rest = parsed.data;
-  const delegateToUserId = rest.delegateToUserId || undefined;
+  try {
+    const supabase = createClient();
+    const rest = parsed.data;
+    const delegateToUserId = rest.delegateToUserId || undefined;
 
-  const { error } = await supabase.from('karmas').insert({
-    org_id: membership.orgId,
-    user_id: delegateToUserId ?? membership.userId,
-    delegated_by: delegateToUserId ? membership.userId : null,
-    title: rest.title,
-    description: rest.description || null,
-    recurrence_type: rest.recurrenceType,
-    recurrence_interval: rest.recurrenceInterval,
-    recurrence_days_of_week: rest.recurrenceDaysOfWeek?.length ? rest.recurrenceDaysOfWeek : null,
-    due_at: rest.dueAt,
-  });
+    const { error } = await supabase.from('karmas').insert({
+      org_id: membership.orgId,
+      user_id: delegateToUserId ?? membership.userId,
+      delegated_by: delegateToUserId ? membership.userId : null,
+      title: rest.title,
+      description: rest.description || null,
+      recurrence_type: rest.recurrenceType,
+      recurrence_interval: rest.recurrenceInterval,
+      recurrence_days_of_week: rest.recurrenceDaysOfWeek?.length ? rest.recurrenceDaysOfWeek : null,
+      due_at: rest.dueAt,
+    });
 
-  if (error) return { error: error.message };
+    if (error) return { error: error.message };
 
-  revalidatePath('/karmas');
-  revalidatePath('/home');
-  return { error: null };
+    revalidatePath('/karmas');
+    revalidatePath('/home');
+    return { error: null };
+  } catch {
+    return { error: 'Something went wrong. Please try again.' };
+  }
 }
 
 export async function getKarmaPanelAction(
@@ -109,132 +113,144 @@ export async function updateKarmaStatusAction(
   fromStatus: TaskStatus,
   toStatus: TaskStatus,
 ): Promise<ActionResult & { appliedStatus?: TaskStatus }> {
-  const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { error: 'You must be signed in.' };
+  try {
+    const supabase = createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return { error: 'You must be signed in.' };
 
-  let appliedStatus = toStatus;
-  let delegatorId: string | null = null;
-  if (toStatus === 'done') {
-    const { data: karma } = await supabase
-      .from('karmas')
-      .select('delegated_by, title, org_id')
-      .eq('id', karmaId)
-      .maybeSingle();
-    if (karma?.delegated_by) {
-      delegatorId = karma.delegated_by;
-      appliedStatus = 'review';
+    let appliedStatus = toStatus;
+    let delegatorId: string | null = null;
+    if (toStatus === 'done') {
+      const { data: karma } = await supabase
+        .from('karmas')
+        .select('delegated_by, title, org_id')
+        .eq('id', karmaId)
+        .maybeSingle();
+      if (karma?.delegated_by) {
+        delegatorId = karma.delegated_by;
+        appliedStatus = 'review';
+      }
     }
-  }
 
-  const { data: karma, error } = await supabase
-    .from('karmas')
-    .update({ status: appliedStatus })
-    .eq('id', karmaId)
-    .select('title, org_id')
-    .single();
-  if (error) return { error: error.message };
+    const { data: karma, error } = await supabase
+      .from('karmas')
+      .update({ status: appliedStatus })
+      .eq('id', karmaId)
+      .select('title, org_id')
+      .single();
+    if (error) return { error: error.message };
 
-  await supabase.from('activity_log').insert({
-    org_id: karma.org_id,
-    actor_id: user.id,
-    entity_type: 'karma',
-    entity_id: karmaId,
-    action: 'status_changed',
-    metadata: { from: fromStatus, to: appliedStatus, title: karma.title },
-  });
-
-  if (delegatorId && delegatorId !== user.id) {
-    await supabase.from('notifications').insert({
+    await supabase.from('activity_log').insert({
       org_id: karma.org_id,
-      user_id: delegatorId,
-      type: 'karma_review',
-      payload: { karmaId, karmaTitle: karma.title },
+      actor_id: user.id,
+      entity_type: 'karma',
+      entity_id: karmaId,
+      action: 'status_changed',
+      metadata: { from: fromStatus, to: appliedStatus, title: karma.title },
     });
-  }
 
-  revalidatePath('/karmas');
-  revalidatePath('/home');
-  return { error: null, appliedStatus };
+    if (delegatorId && delegatorId !== user.id) {
+      await supabase.from('notifications').insert({
+        org_id: karma.org_id,
+        user_id: delegatorId,
+        type: 'karma_review',
+        payload: { karmaId, karmaTitle: karma.title },
+      });
+    }
+
+    revalidatePath('/karmas');
+    revalidatePath('/home');
+    return { error: null, appliedStatus };
+  } catch {
+    return { error: 'Something went wrong. Please try again.' };
+  }
 }
 
 export async function approveKarmaAction(karmaId: string): Promise<ActionResult> {
-  const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { error: 'You must be signed in.' };
+  try {
+    const supabase = createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return { error: 'You must be signed in.' };
 
-  const { data: karma, error } = await supabase
-    .from('karmas')
-    .update({ status: 'done' })
-    .eq('id', karmaId)
-    .select('title, org_id, user_id')
-    .single();
-  if (error) return { error: error.message };
+    const { data: karma, error } = await supabase
+      .from('karmas')
+      .update({ status: 'done' })
+      .eq('id', karmaId)
+      .select('title, org_id, user_id')
+      .single();
+    if (error) return { error: error.message };
 
-  await supabase.from('activity_log').insert({
-    org_id: karma.org_id,
-    actor_id: user.id,
-    entity_type: 'karma',
-    entity_id: karmaId,
-    action: 'approved',
-    metadata: { title: karma.title },
-  });
-
-  if (karma.user_id !== user.id) {
-    await supabase.from('notifications').insert({
+    await supabase.from('activity_log').insert({
       org_id: karma.org_id,
-      user_id: karma.user_id,
-      type: 'karma_approved',
-      payload: { karmaId, karmaTitle: karma.title },
+      actor_id: user.id,
+      entity_type: 'karma',
+      entity_id: karmaId,
+      action: 'approved',
+      metadata: { title: karma.title },
     });
-  }
 
-  revalidatePath('/karmas');
-  revalidatePath('/home');
-  return { error: null };
+    if (karma.user_id !== user.id) {
+      await supabase.from('notifications').insert({
+        org_id: karma.org_id,
+        user_id: karma.user_id,
+        type: 'karma_approved',
+        payload: { karmaId, karmaTitle: karma.title },
+      });
+    }
+
+    revalidatePath('/karmas');
+    revalidatePath('/home');
+    return { error: null };
+  } catch {
+    return { error: 'Something went wrong. Please try again.' };
+  }
 }
 
 export async function reopenKarmaAction(karmaId: string, comment: string): Promise<ActionResult> {
   const trimmed = comment.trim();
   if (!trimmed) return { error: 'A comment is required when reopening a karma.' };
 
-  const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { error: 'You must be signed in.' };
+  try {
+    const supabase = createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return { error: 'You must be signed in.' };
 
-  const { data: karma, error } = await supabase
-    .from('karmas')
-    .update({ status: 'in_progress' })
-    .eq('id', karmaId)
-    .select('title, org_id, user_id')
-    .single();
-  if (error) return { error: error.message };
+    const { data: karma, error } = await supabase
+      .from('karmas')
+      .update({ status: 'in_progress' })
+      .eq('id', karmaId)
+      .select('title, org_id, user_id')
+      .single();
+    if (error) return { error: error.message };
 
-  await supabase.from('activity_log').insert({
-    org_id: karma.org_id,
-    actor_id: user.id,
-    entity_type: 'karma',
-    entity_id: karmaId,
-    action: 'reopened',
-    metadata: { title: karma.title, comment: trimmed },
-  });
-
-  if (karma.user_id !== user.id) {
-    await supabase.from('notifications').insert({
+    await supabase.from('activity_log').insert({
       org_id: karma.org_id,
-      user_id: karma.user_id,
-      type: 'karma_reopened',
-      payload: { karmaId, karmaTitle: karma.title },
+      actor_id: user.id,
+      entity_type: 'karma',
+      entity_id: karmaId,
+      action: 'reopened',
+      metadata: { title: karma.title, comment: trimmed },
     });
-  }
 
-  revalidatePath('/karmas');
-  revalidatePath('/home');
-  return { error: null };
+    if (karma.user_id !== user.id) {
+      await supabase.from('notifications').insert({
+        org_id: karma.org_id,
+        user_id: karma.user_id,
+        type: 'karma_reopened',
+        payload: { karmaId, karmaTitle: karma.title },
+      });
+    }
+
+    revalidatePath('/karmas');
+    revalidatePath('/home');
+    return { error: null };
+  } catch {
+    return { error: 'Something went wrong. Please try again.' };
+  }
 }

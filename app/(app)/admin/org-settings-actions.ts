@@ -11,13 +11,17 @@ export async function setEscalationThresholdAction(
     return { error: 'Threshold must be a positive number of hours.' };
   }
 
-  const supabase = createClient();
-  const { error } = await supabase
-    .from('organizations')
-    .update({ escalation_threshold_hours: Math.round(hours) })
-    .eq('id', orgId);
+  try {
+    const supabase = createClient();
+    const { error } = await supabase
+      .from('organizations')
+      .update({ escalation_threshold_hours: Math.round(hours) })
+      .eq('id', orgId);
 
-  if (error) return { error: error.message };
-  revalidatePath('/admin');
-  return { error: null };
+    if (error) return { error: error.message };
+    revalidatePath('/admin');
+    return { error: null };
+  } catch {
+    return { error: 'Something went wrong. Please try again.' };
+  }
 }

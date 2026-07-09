@@ -12,33 +12,41 @@ export async function addProjectMemberAction(
   role: ProjectRole,
   columnIds: string[],
 ): Promise<ActionResult> {
-  const supabase = createClient();
-  const { error } = await supabase
-    .from('project_members')
-    .insert({ project_id: projectId, user_id: userId, project_role: role });
-  if (error) return { error: error.message };
+  try {
+    const supabase = createClient();
+    const { error } = await supabase
+      .from('project_members')
+      .insert({ project_id: projectId, user_id: userId, project_role: role });
+    if (error) return { error: error.message };
 
-  if (role === 'guest' && columnIds.length > 0) {
-    const { error: accessError } = await supabase.from('project_column_access').insert(
-      columnIds.map((columnId) => ({ project_id: projectId, user_id: userId, column_id: columnId })),
-    );
-    if (accessError) return { error: accessError.message };
+    if (role === 'guest' && columnIds.length > 0) {
+      const { error: accessError } = await supabase.from('project_column_access').insert(
+        columnIds.map((columnId) => ({ project_id: projectId, user_id: userId, column_id: columnId })),
+      );
+      if (accessError) return { error: accessError.message };
+    }
+
+    revalidatePath(`/projects/${projectId}/members`);
+    return { error: null };
+  } catch {
+    return { error: 'Something went wrong. Please try again.' };
   }
-
-  revalidatePath(`/projects/${projectId}/members`);
-  return { error: null };
 }
 
 export async function removeProjectMemberAction(
   projectId: string,
   memberId: string,
 ): Promise<ActionResult> {
-  const supabase = createClient();
-  const { error } = await supabase.from('project_members').delete().eq('id', memberId);
-  if (error) return { error: error.message };
+  try {
+    const supabase = createClient();
+    const { error } = await supabase.from('project_members').delete().eq('id', memberId);
+    if (error) return { error: error.message };
 
-  revalidatePath(`/projects/${projectId}/members`);
-  return { error: null };
+    revalidatePath(`/projects/${projectId}/members`);
+    return { error: null };
+  } catch {
+    return { error: 'Something went wrong. Please try again.' };
+  }
 }
 
 export async function setGuestColumnAccessAction(
@@ -46,22 +54,26 @@ export async function setGuestColumnAccessAction(
   userId: string,
   columnIds: string[],
 ): Promise<ActionResult> {
-  const supabase = createClient();
+  try {
+    const supabase = createClient();
 
-  const { error: deleteError } = await supabase
-    .from('project_column_access')
-    .delete()
-    .eq('project_id', projectId)
-    .eq('user_id', userId);
-  if (deleteError) return { error: deleteError.message };
+    const { error: deleteError } = await supabase
+      .from('project_column_access')
+      .delete()
+      .eq('project_id', projectId)
+      .eq('user_id', userId);
+    if (deleteError) return { error: deleteError.message };
 
-  if (columnIds.length > 0) {
-    const { error: insertError } = await supabase.from('project_column_access').insert(
-      columnIds.map((columnId) => ({ project_id: projectId, user_id: userId, column_id: columnId })),
-    );
-    if (insertError) return { error: insertError.message };
+    if (columnIds.length > 0) {
+      const { error: insertError } = await supabase.from('project_column_access').insert(
+        columnIds.map((columnId) => ({ project_id: projectId, user_id: userId, column_id: columnId })),
+      );
+      if (insertError) return { error: insertError.message };
+    }
+
+    revalidatePath(`/projects/${projectId}/members`);
+    return { error: null };
+  } catch {
+    return { error: 'Something went wrong. Please try again.' };
   }
-
-  revalidatePath(`/projects/${projectId}/members`);
-  return { error: null };
 }

@@ -48,33 +48,45 @@ export async function setOrgNameAction(orgId: string, name: string): Promise<Act
   const trimmed = name.trim();
   if (!trimmed) return { error: 'Organization name is required.' };
 
-  const supabase = createClient();
-  const { error } = await supabase.from('organizations').update({ name: trimmed }).eq('id', orgId);
-  if (error) return { error: error.message };
+  try {
+    const supabase = createClient();
+    const { error } = await supabase.from('organizations').update({ name: trimmed }).eq('id', orgId);
+    if (error) return { error: error.message };
 
-  revalidatePath('/admin');
-  return { error: null };
+    revalidatePath('/admin');
+    return { error: null };
+  } catch {
+    return { error: 'Something went wrong. Please try again.' };
+  }
 }
 
 export async function updateMemberRoleAction(
   memberId: string,
   role: OrgRole,
 ): Promise<ActionResult> {
-  const supabase = createClient();
-  const { error } = await supabase.from('org_members').update({ org_role: role }).eq('id', memberId);
-  if (error) return { error: error.message };
+  try {
+    const supabase = createClient();
+    const { error } = await supabase.from('org_members').update({ org_role: role }).eq('id', memberId);
+    if (error) return { error: error.message };
 
-  revalidatePath('/admin');
-  return { error: null };
+    revalidatePath('/admin');
+    return { error: null };
+  } catch {
+    return { error: 'Something went wrong. Please try again.' };
+  }
 }
 
 export async function removeMemberAction(memberId: string): Promise<ActionResult> {
-  const supabase = createClient();
-  const { error } = await supabase.from('org_members').delete().eq('id', memberId);
-  if (error) return { error: error.message };
+  try {
+    const supabase = createClient();
+    const { error } = await supabase.from('org_members').delete().eq('id', memberId);
+    if (error) return { error: error.message };
 
-  revalidatePath('/admin');
-  return { error: null };
+    revalidatePath('/admin');
+    return { error: null };
+  } catch {
+    return { error: 'Something went wrong. Please try again.' };
+  }
 }
 
 export type ArchivableProject = { id: string; name: string; archivedAt: string | null };
@@ -98,14 +110,18 @@ export async function getArchivableProjectsAction(): Promise<ArchivableProject[]
 }
 
 export async function archiveProjectAction(projectId: string): Promise<ActionResult> {
-  const supabase = createClient();
-  const { error } = await supabase
-    .from('projects')
-    .update({ archived_at: new Date().toISOString() })
-    .eq('id', projectId);
-  if (error) return { error: error.message };
+  try {
+    const supabase = createClient();
+    const { error } = await supabase
+      .from('projects')
+      .update({ archived_at: new Date().toISOString() })
+      .eq('id', projectId);
+    if (error) return { error: error.message };
 
-  revalidatePath('/admin');
-  revalidatePath('/projects');
-  return { error: null };
+    revalidatePath('/admin');
+    revalidatePath('/projects');
+    return { error: null };
+  } catch {
+    return { error: 'Something went wrong. Please try again.' };
+  }
 }

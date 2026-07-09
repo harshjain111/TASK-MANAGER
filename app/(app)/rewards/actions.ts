@@ -134,23 +134,31 @@ export async function createRewardAction(
   const membership = await getCurrentOrgMembership();
   if (!membership) return { error: 'You must belong to an organization.' };
 
-  const supabase = createClient();
-  const { error } = await supabase.from('rewards').insert({
-    org_id: membership.orgId,
-    title: trimmedTitle,
-    description: description.trim() || null,
-    created_by: membership.userId,
-  });
+  try {
+    const supabase = createClient();
+    const { error } = await supabase.from('rewards').insert({
+      org_id: membership.orgId,
+      title: trimmedTitle,
+      description: description.trim() || null,
+      created_by: membership.userId,
+    });
 
-  if (error) return { error: error.message };
-  revalidatePath('/rewards');
-  return { error: null };
+    if (error) return { error: error.message };
+    revalidatePath('/rewards');
+    return { error: null };
+  } catch {
+    return { error: 'Something went wrong. Please try again.' };
+  }
 }
 
 export async function deleteRewardAction(rewardId: string): Promise<{ error: string | null }> {
-  const supabase = createClient();
-  const { error } = await supabase.from('rewards').delete().eq('id', rewardId);
-  if (error) return { error: error.message };
-  revalidatePath('/rewards');
-  return { error: null };
+  try {
+    const supabase = createClient();
+    const { error } = await supabase.from('rewards').delete().eq('id', rewardId);
+    if (error) return { error: error.message };
+    revalidatePath('/rewards');
+    return { error: null };
+  } catch {
+    return { error: 'Something went wrong. Please try again.' };
+  }
 }

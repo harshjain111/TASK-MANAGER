@@ -54,7 +54,12 @@ export function NotificationsBell({ userId }: { userId: string | null }) {
 
   useEffect(() => {
     if (!userId) return;
-    const supabase = createClient();
+    let supabase: ReturnType<typeof createClient>;
+    try {
+      supabase = createClient();
+    } catch {
+      return;
+    }
     const channel = supabase
       .channel(userChannelName(userId))
       .on(

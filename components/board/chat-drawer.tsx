@@ -51,7 +51,12 @@ export function ChatDrawer({
 
   useEffect(() => {
     if (!columnId) return;
-    const supabase = createClient();
+    let supabase: ReturnType<typeof createClient>;
+    try {
+      supabase = createClient();
+    } catch {
+      return;
+    }
     const channel = supabase
       .channel(columnChannelName(columnId))
       .on(
