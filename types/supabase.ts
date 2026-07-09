@@ -506,6 +506,44 @@ export interface Database {
         };
         Relationships: [];
       };
+      task_attachments: {
+        Row: {
+          id: string;
+          task_id: string;
+          uploaded_by: string;
+          file_name: string;
+          file_url: string;
+          file_size: number | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          task_id: string;
+          uploaded_by: string;
+          file_name: string;
+          file_url: string;
+          file_size?: number | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          task_id?: string;
+          uploaded_by?: string;
+          file_name?: string;
+          file_url?: string;
+          file_size?: number | null;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'task_attachments_task_id_fkey';
+            columns: ['task_id'];
+            isOneToOne: false;
+            referencedRelation: 'tasks';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
     };
     Views: Record<string, never>;
     Functions: {

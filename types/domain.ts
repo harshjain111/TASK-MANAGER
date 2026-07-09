@@ -14,6 +14,7 @@ export type BoardColumn = Database['public']['Tables']['board_columns']['Row'];
 export type Task = Database['public']['Tables']['tasks']['Row'];
 export type TaskAssignee = Database['public']['Tables']['task_assignees']['Row'];
 export type TaskChecklistItem = Database['public']['Tables']['task_checklist_items']['Row'];
+export type TaskAttachment = Database['public']['Tables']['task_attachments']['Row'];
 export type TaskStatus = Database['public']['Enums']['task_status'];
 export type TaskPriority = Database['public']['Enums']['task_priority'];
 

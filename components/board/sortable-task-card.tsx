@@ -10,10 +10,12 @@ export function SortableTaskCard({
   task,
   columnId,
   onStatusChange,
+  onOpen,
 }: {
   task: TaskCardData;
   columnId: string;
   onStatusChange: (taskId: string, next: ReturnType<typeof nextTaskStatus>) => void;
+  onOpen: (taskId: string) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: task.id,
@@ -35,7 +37,11 @@ export function SortableTaskCard({
       {...listeners}
       className={cn('touch-none', isDragging && 'opacity-50')}
     >
-      <TaskCard task={task} onStatusClick={next ? () => onStatusChange(task.id, next) : undefined} />
+      <TaskCard
+        task={task}
+        onClick={() => onOpen(task.id)}
+        onStatusClick={next ? () => onStatusChange(task.id, next) : undefined}
+      />
     </div>
   );
 }

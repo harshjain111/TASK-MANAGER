@@ -17,6 +17,7 @@ import { moveTaskAction, updateTaskStatusAction } from '@/app/(app)/projects/[pr
 import type { TaskCardData } from '@/components/tasks/task-card';
 import type { PickableMember } from '@/components/tasks/assignee-picker';
 import type { TaskStatus } from '@/types/domain';
+import { TaskDetailSheet } from '@/components/tasks/task-detail-sheet';
 
 export function Board({
   projectId,
@@ -35,6 +36,7 @@ export function Board({
   // revalidatePath in the column/task actions) hands us fresh props.
   const [orderedColumns, setOrderedColumns] = useState(columns);
   const [tasksState, setTasksState] = useState(tasksByColumn);
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   useEffect(() => setOrderedColumns(columns), [columns]);
   useEffect(() => setTasksState(tasksByColumn), [tasksByColumn]);
 
@@ -155,12 +157,20 @@ export function Board({
               members={members}
               canManage={canManage}
               onStatusChange={handleStatusChange}
+              onOpenTask={setSelectedTaskId}
             />
           ))}
         </SortableContext>
       </DndContext>
 
       {canManage && <AddColumnForm projectId={projectId} />}
+
+      <TaskDetailSheet
+        projectId={projectId}
+        taskId={selectedTaskId}
+        members={members}
+        onOpenChange={(open) => !open && setSelectedTaskId(null)}
+      />
     </div>
   );
 }

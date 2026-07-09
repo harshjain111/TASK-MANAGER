@@ -37,6 +37,7 @@ export function BoardColumn({
   members,
   canManage,
   onStatusChange,
+  onOpenTask,
 }: {
   projectId: string;
   column: BoardColumnData;
@@ -44,6 +45,7 @@ export function BoardColumn({
   members: PickableMember[];
   canManage: boolean;
   onStatusChange: (taskId: string, next: ReturnType<typeof nextTaskStatus>) => void;
+  onOpenTask: (taskId: string) => void;
 }) {
   const [isRenaming, setIsRenaming] = useState(false);
   const [name, setName] = useState(column.name);
@@ -183,6 +185,7 @@ export function BoardColumn({
                   task={task}
                   columnId={column.id}
                   onStatusChange={onStatusChange}
+                  onOpen={onOpenTask}
                 />
               ))
             )}
