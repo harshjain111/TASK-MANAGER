@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
-export function LoginForm() {
+export function LoginForm({ inviteToken }: { inviteToken?: string }) {
   const [serverError, setServerError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -23,7 +23,7 @@ export function LoginForm() {
   const onSubmit = (input: LoginInput) => {
     setServerError(null);
     startTransition(async () => {
-      const result = await signInAction(input);
+      const result = await signInAction(input, inviteToken);
       if (result?.error) setServerError(result.error);
     });
   };
@@ -60,7 +60,10 @@ export function LoginForm() {
 
       <p className="text-center text-sm text-muted-foreground">
         No account?{' '}
-        <Link href="/signup" className="font-medium text-primary hover:underline">
+        <Link
+          href={inviteToken ? `/signup?invite=${inviteToken}` : '/signup'}
+          className="font-medium text-primary hover:underline"
+        >
           Sign up
         </Link>
       </p>

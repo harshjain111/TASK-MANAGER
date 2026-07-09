@@ -10,7 +10,15 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
-export function SignupForm({ inviteToken }: { inviteToken?: string }) {
+type InviteDetails = { org_name: string; org_role: string; email: string };
+
+export function SignupForm({
+  inviteToken,
+  invite,
+}: {
+  inviteToken?: string;
+  invite?: InviteDetails;
+}) {
   const [serverError, setServerError] = useState<string | null>(null);
   const [checkEmail, setCheckEmail] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -21,7 +29,7 @@ export function SignupForm({ inviteToken }: { inviteToken?: string }) {
     formState: { errors },
   } = useForm<SignupInput>({
     resolver: zodResolver(signupSchema),
-    defaultValues: { inviteToken },
+    defaultValues: { inviteToken, email: invite?.email },
   });
 
   const onSubmit = (input: SignupInput) => {
@@ -36,6 +44,8 @@ export function SignupForm({ inviteToken }: { inviteToken?: string }) {
     });
   };
 
+  const loginHref = inviteToken ? `/login?invite=${inviteToken}` : '/login';
+
   if (checkEmail) {
     return (
       <div className="flex flex-col items-center gap-2 text-center">
@@ -43,7 +53,7 @@ export function SignupForm({ inviteToken }: { inviteToken?: string }) {
         <p className="text-sm text-muted-foreground">
           We sent you a confirmation link. Click it, then come back and log in.
         </p>
-        <Link href="/login" className="mt-2 text-sm font-medium text-primary hover:underline">
+        <Link href={loginHref} className="mt-2 text-sm font-medium text-primary hover:underline">
           Back to login
         </Link>
       </div>
@@ -54,11 +64,11 @@ export function SignupForm({ inviteToken }: { inviteToken?: string }) {
     <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4" noValidate>
       <div>
         <h1 className="text-lg font-semibold text-foreground">
-          {inviteToken ? 'Join your team' : 'Create your organization'}
+          {invite ? `Join ${invite.org_name}` : 'Create your organization'}
         </h1>
         <p className="text-sm text-muted-foreground">
-          {inviteToken
-            ? "You've been invited — set up your account to join."
+          {invite
+            ? `You've been invited to join as ${invite.org_role}.`
             : 'Start with a new Flowdesk workspace for your org.'}
         </p>
       </div>
@@ -79,7 +89,14 @@ export function SignupForm({ inviteToken }: { inviteToken?: string }) {
 
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="email">Email</Label>
-        <Input id="email" type="email" autoComplete="email" {...register('email')} />
+        <Input
+          id="email"
+          type="email"
+          autoComplete="email"
+          readOnly={!!invite}
+          className={invite ? 'bg-muted text-muted-foreground' : undefined}
+          {...register('email')}
+        />
         {errors.email && <p className="text-xs text-destructive">{errors.email.message}</p>}
       </div>
 
@@ -102,7 +119,7 @@ export function SignupForm({ inviteToken }: { inviteToken?: string }) {
 
       <p className="text-center text-sm text-muted-foreground">
         Already have an account?{' '}
-        <Link href="/login" className="font-medium text-primary hover:underline">
+        <Link href={loginHref} className="font-medium text-primary hover:underline">
           Log in
         </Link>
       </p>

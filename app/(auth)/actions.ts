@@ -6,7 +6,7 @@ import { loginSchema, signupSchema, type LoginInput, type SignupInput } from '@/
 
 type ActionResult = { error: string | null; needsEmailConfirmation?: boolean };
 
-export async function signInAction(input: LoginInput): Promise<ActionResult> {
+export async function signInAction(input: LoginInput, inviteToken?: string): Promise<ActionResult> {
   const parsed = loginSchema.safeParse(input);
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? 'Invalid input' };
@@ -17,6 +17,19 @@ export async function signInAction(input: LoginInput): Promise<ActionResult> {
 
   if (error) {
     return { error: error.message };
+  }
+
+  // Covers the "email confirmation required" detour: an invited user who
+  // signed up, had no session yet (see signUpAction), confirmed via email,
+  // and is now logging in for the first time with the invite link's token
+  // still attached.
+  if (inviteToken) {
+    const { error: acceptError } = await supabase.rpc('accept_org_invite', {
+      invite_token: inviteToken,
+    });
+    if (acceptError) {
+      return { error: acceptError.message };
+    }
   }
 
   redirect('/home');
@@ -49,16 +62,19 @@ export async function signUpAction(input: SignupInput): Promise<ActionResult> {
   }
 
   if (inviteToken) {
-    // Wired up in P6 once org_invites exists (accept_org_invite RPC).
-    return { error: "Invite links aren't supported yet — ask your admin to add you manually." };
-  }
-
-  const { error: rpcError } = await supabase.rpc('create_organization', {
-    org_name: orgName!,
-  });
-
-  if (rpcError) {
-    return { error: rpcError.message };
+    const { error: acceptError } = await supabase.rpc('accept_org_invite', {
+      invite_token: inviteToken,
+    });
+    if (acceptError) {
+      return { error: acceptError.message };
+    }
+  } else {
+    const { error: rpcError } = await supabase.rpc('create_organization', {
+      org_name: orgName!,
+    });
+    if (rpcError) {
+      return { error: rpcError.message };
+    }
   }
 
   redirect('/home');

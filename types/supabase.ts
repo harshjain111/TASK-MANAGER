@@ -66,6 +66,50 @@ export interface Database {
           },
         ];
       };
+      org_invites: {
+        Row: {
+          id: string;
+          org_id: string;
+          email: string;
+          org_role: OrgRole;
+          token: string;
+          invited_by: string;
+          expires_at: string;
+          accepted_at: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          org_id: string;
+          email: string;
+          org_role?: OrgRole;
+          token?: string;
+          invited_by: string;
+          expires_at?: string;
+          accepted_at?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          org_id?: string;
+          email?: string;
+          org_role?: OrgRole;
+          token?: string;
+          invited_by?: string;
+          expires_at?: string;
+          accepted_at?: string | null;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'org_invites_org_id_fkey';
+            columns: ['org_id'];
+            isOneToOne: false;
+            referencedRelation: 'organizations';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
     };
     Views: Record<string, never>;
     Functions: {
@@ -80,6 +124,14 @@ export interface Database {
       has_org_role: {
         Args: { check_org_id: string; allowed_roles: OrgRole[] };
         Returns: boolean;
+      };
+      get_org_invite: {
+        Args: { invite_token: string };
+        Returns: { org_name: string; org_role: OrgRole; email: string }[];
+      };
+      accept_org_invite: {
+        Args: { invite_token: string };
+        Returns: string;
       };
     };
     Enums: {
