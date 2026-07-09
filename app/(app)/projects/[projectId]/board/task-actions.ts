@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import { createTaskSchema, quickTaskSchema, type CreateTaskInput, type QuickTaskInput } from '@/lib/validations/task';
+import { notifyTaskAssigned } from '@/lib/notifications';
 import type { TaskStatus } from '@/types/domain';
 
 type ActionResult = { error: string | null; taskId?: string };
@@ -43,7 +44,21 @@ async function insertAssignees(
   }
 
   const { error } = await supabase.from('task_assignees').insert(rows);
-  return error;
+  return { error, doers };
+}
+
+async function notifyDoers(
+  supabase: ReturnType<typeof createClient>,
+  projectId: string,
+  taskId: string,
+  taskTitle: string,
+  doers: string[],
+  actingUserId: string,
+) {
+  const { data: orgId } = await supabase.rpc('get_project_org_id', { check_project_id: projectId });
+  if (orgId) {
+    await notifyTaskAssigned(supabase, orgId, taskId, taskTitle, projectId, doers, actingUserId);
+  }
 }
 
 export async function createQuickTaskAction(
@@ -77,8 +92,9 @@ export async function createQuickTaskAction(
 
   if (error) return { error: error.message };
 
-  const assigneeError = await insertAssignees(supabase, task.id, user.id, []);
+  const { error: assigneeError, doers } = await insertAssignees(supabase, task.id, user.id, []);
   if (assigneeError) return { error: assigneeError.message };
+  await notifyDoers(supabase, projectId, task.id, parsed.data.title, doers, user.id);
 
   revalidatePath(`/projects/${projectId}/board`);
   return { error: null, taskId: task.id };
@@ -189,8 +205,9 @@ export async function createTaskAction(
 
   if (error) return { error: error.message };
 
-  const assigneeError = await insertAssignees(supabase, task.id, user.id, assigneeIds);
+  const { error: assigneeError, doers } = await insertAssignees(supabase, task.id, user.id, assigneeIds);
   if (assigneeError) return { error: assigneeError.message };
+  await notifyDoers(supabase, projectId, task.id, title, doers, user.id);
 
   if (checklist.length > 0) {
     const { error: checklistError } = await supabase.from('task_checklist_items').insert(

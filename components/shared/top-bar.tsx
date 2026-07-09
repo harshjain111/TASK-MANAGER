@@ -1,8 +1,9 @@
-import { Bell, Plus, Search } from 'lucide-react';
+import { Plus, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar } from '@/components/shared/avatar';
+import { NotificationsBell } from '@/components/shared/notifications-bell';
 
-export function TopBar() {
+export function TopBar({ userId, userName }: { userId: string | null; userName: string }) {
   return (
     <header className="flex h-14 shrink-0 items-center gap-3 border-b border-border bg-background px-4">
       <div className="relative flex-1 max-w-md">
@@ -20,10 +21,8 @@ export function TopBar() {
           <Plus className="size-4" />
           Create
         </Button>
-        <Button size="icon" variant="ghost" aria-label="Notifications">
-          <Bell className="size-4" />
-        </Button>
-        <Avatar name="You" size="sm" />
+        <NotificationsBell userId={userId} />
+        <Avatar name={userName} seed={userId ?? userName} size="sm" />
       </div>
     </header>
   );

@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
+import { notifyTaskAssigned } from '@/lib/notifications';
 import type { TaskPriority } from '@/types/domain';
 
 type ActionResult = { error: string | null };
@@ -183,6 +184,10 @@ export async function updateAssigneesAction(
   assigneeIds: string[],
 ): Promise<ActionResult> {
   const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: 'You must be signed in.' };
 
   // Replace the "doer" rows only — leave any is_delegator row untouched.
   const { error: deleteError } = await supabase
@@ -202,6 +207,14 @@ export async function updateAssigneesAction(
       })),
     );
     if (insertError) return { error: insertError.message };
+
+    const [{ data: task }, { data: orgId }] = await Promise.all([
+      supabase.from('tasks').select('title').eq('id', taskId).maybeSingle(),
+      supabase.rpc('get_project_org_id', { check_project_id: projectId }),
+    ]);
+    if (task && orgId) {
+      await notifyTaskAssigned(supabase, orgId, taskId, task.title, projectId, assigneeIds, user.id);
+    }
   }
 
   revalidatePath(`/projects/${projectId}/board`);
