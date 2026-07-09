@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/server';
 export type NotificationRow = {
   id: string;
   type: string;
-  payload: { taskId?: string; taskTitle?: string; projectId?: string };
+  payload: { taskId?: string; taskTitle?: string; projectId?: string; columnId?: string; body?: string };
   readAt: string | null;
   createdAt: string;
 };

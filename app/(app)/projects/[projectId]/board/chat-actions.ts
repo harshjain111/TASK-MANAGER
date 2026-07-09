@@ -105,7 +105,10 @@ export async function getColumnFeedAction(projectId: string, columnId: string): 
   }
 }
 
-export async function sendMessageAction(input: SendMessageInput): Promise<ActionResult> {
+export async function sendMessageAction(
+  projectId: string,
+  input: SendMessageInput,
+): Promise<ActionResult> {
   const parsed = sendMessageSchema.safeParse(input);
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? 'Invalid input' };
@@ -126,6 +129,29 @@ export async function sendMessageAction(input: SendMessageInput): Promise<Action
   });
 
   if (error) return { error: error.message };
+
+  // Mentions notify even past a muted column (P18) — mute only suppresses
+  // badge/toast delivery, never the underlying notification row.
+  const mentioned = (parsed.data.mentionedUserIds ?? []).filter((id) => id !== user.id);
+  if (mentioned.length > 0) {
+    const { data: orgId } = await supabase.rpc('get_project_org_id', { check_project_id: projectId });
+    if (orgId) {
+      await supabase.from('notifications').insert(
+        mentioned.map((userId) => ({
+          org_id: orgId,
+          user_id: userId,
+          type: 'mention',
+          payload: {
+            projectId,
+            columnId: parsed.data.columnId,
+            taskId: parsed.data.taskId ?? null,
+            body: parsed.data.body,
+          },
+        })),
+      );
+    }
+  }
+
   return { error: null };
 }
 

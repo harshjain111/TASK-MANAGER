@@ -179,6 +179,7 @@ export function Board({
         projectId={projectId}
         columnId={chatColumn?.id ?? null}
         columnName={chatColumn?.name ?? ''}
+        members={members}
         onOpenChange={(open) => !open && setChatColumn(null)}
       />
     </div>
