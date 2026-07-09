@@ -10,6 +10,7 @@ export type ProjectRole = 'manager' | 'employee' | 'guest';
 export type TaskStatus = 'not_started' | 'in_progress' | 'stuck' | 'done' | 'review';
 export type TaskPriority = 'low' | 'medium' | 'high' | 'urgent';
 export type MessageType = 'text' | 'photo' | 'file' | 'system';
+export type KarmaRecurrenceType = 'daily' | 'weekly' | 'monthly' | 'custom';
 
 export interface Database {
   public: {
@@ -568,6 +569,63 @@ export interface Database {
         };
         Relationships: [];
       };
+      karmas: {
+        Row: {
+          id: string;
+          org_id: string;
+          user_id: string;
+          delegated_by: string | null;
+          project_id: string | null;
+          title: string;
+          description: string | null;
+          recurrence_type: KarmaRecurrenceType;
+          recurrence_interval: number;
+          recurrence_days_of_week: number[] | null;
+          status: TaskStatus;
+          due_at: string;
+          previous_karma_id: string | null;
+          created_at: string;
+          updated_at: string;
+          archived_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          org_id: string;
+          user_id: string;
+          delegated_by?: string | null;
+          project_id?: string | null;
+          title: string;
+          description?: string | null;
+          recurrence_type?: KarmaRecurrenceType;
+          recurrence_interval?: number;
+          recurrence_days_of_week?: number[] | null;
+          status?: TaskStatus;
+          due_at: string;
+          previous_karma_id?: string | null;
+          created_at?: string;
+          updated_at?: string;
+          archived_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          org_id?: string;
+          user_id?: string;
+          delegated_by?: string | null;
+          project_id?: string | null;
+          title?: string;
+          description?: string | null;
+          recurrence_type?: KarmaRecurrenceType;
+          recurrence_interval?: number;
+          recurrence_days_of_week?: number[] | null;
+          status?: TaskStatus;
+          due_at?: string;
+          previous_karma_id?: string | null;
+          created_at?: string;
+          updated_at?: string;
+          archived_at?: string | null;
+        };
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {
@@ -631,6 +689,19 @@ export interface Database {
         Args: { check_column_id: string };
         Returns: boolean;
       };
+      next_karma_due_at: {
+        Args: {
+          current_due: string;
+          rec_type: KarmaRecurrenceType;
+          rec_interval: number;
+          rec_days_of_week: number[] | null;
+        };
+        Returns: string;
+      };
+      generate_overdue_karma_occurrences: {
+        Args: Record<string, never>;
+        Returns: number;
+      };
     };
     Enums: {
       org_role: OrgRole;
@@ -638,6 +709,7 @@ export interface Database {
       task_status: TaskStatus;
       task_priority: TaskPriority;
       message_type: MessageType;
+      karma_recurrence_type: KarmaRecurrenceType;
     };
     CompositeTypes: Record<string, never>;
   };

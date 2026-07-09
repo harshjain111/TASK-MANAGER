@@ -27,3 +27,6 @@ export type Notification = Database['public']['Tables']['notifications']['Row'];
 export type Profile = Database['public']['Tables']['profiles']['Row'];
 
 export type Mute = Database['public']['Tables']['mutes']['Row'];
+
+export type Karma = Database['public']['Tables']['karmas']['Row'];
+export type KarmaRecurrenceType = Database['public']['Enums']['karma_recurrence_type'];
