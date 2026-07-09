@@ -1,10 +1,16 @@
+import { CalendarStrip } from '@/components/home/calendar-strip';
 import { ComingSoon } from '@/components/shared/coming-soon';
 
 export default function HomePage() {
   return (
-    <ComingSoon
-      title="My Day"
-      blurb="The calendar strip and My/Delegated grid land here in Phase 1 (P13–P14)."
-    />
+    <div className="flex h-full flex-col">
+      <CalendarStrip />
+      <div className="flex-1 overflow-auto">
+        <ComingSoon
+          title="My Day"
+          blurb="The My/Delegated Tasks & Karmas grid lands here in P14."
+        />
+      </div>
+    </div>
   );
 }
