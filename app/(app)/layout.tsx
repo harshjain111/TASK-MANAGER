@@ -1,5 +1,6 @@
 import { NavRail } from '@/components/shared/nav-rail';
 import { TopBar } from '@/components/shared/top-bar';
+import { BottomTabNav } from '@/components/shared/bottom-tab-nav';
 import { PresenceHeartbeat } from '@/components/shared/presence-heartbeat';
 import { createClient } from '@/lib/supabase/server';
 
@@ -33,6 +34,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <div className="flex min-w-0 flex-1 flex-col">
         <TopBar userId={userId} userName={userName} />
         <main className="min-h-0 flex-1 overflow-auto">{children}</main>
+        <BottomTabNav />
       </div>
     </div>
   );
