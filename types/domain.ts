@@ -22,3 +22,5 @@ export type MessageType = Database['public']['Enums']['message_type'];
 
 export type ActivityLogEntry = Database['public']['Tables']['activity_log']['Row'];
 export type Notification = Database['public']['Tables']['notifications']['Row'];
+
+export type Profile = Database['public']['Tables']['profiles']['Row'];

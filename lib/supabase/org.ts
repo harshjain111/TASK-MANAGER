@@ -35,3 +35,24 @@ export async function getCurrentOrgMembership() {
     return null;
   }
 }
+
+/** Org teammates for member pickers (New Project modal, AssigneePicker). */
+export async function getOrgMembersForPicker(orgId: string) {
+  try {
+    const supabase = createClient();
+    const { data } = await supabase
+      .from('org_members')
+      .select('user_id, profiles(full_name, email)')
+      .eq('org_id', orgId);
+
+    return (data ?? []).map((row) => {
+      const profile = row.profiles as unknown as { full_name: string; email: string } | null;
+      return {
+        userId: row.user_id,
+        name: profile?.full_name || profile?.email || 'Unknown',
+      };
+    });
+  } catch {
+    return [];
+  }
+}

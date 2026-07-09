@@ -482,11 +482,43 @@ export interface Database {
           },
         ];
       };
+      profiles: {
+        Row: {
+          id: string;
+          full_name: string;
+          avatar_url: string | null;
+          email: string;
+          created_at: string;
+        };
+        Insert: {
+          id: string;
+          full_name?: string;
+          avatar_url?: string | null;
+          email: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          full_name?: string;
+          avatar_url?: string | null;
+          email?: string;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {
       create_organization: {
         Args: { org_name: string };
+        Returns: string;
+      };
+      create_project: {
+        Args: {
+          project_name: string;
+          project_cover_color?: string;
+          initial_member_ids?: string[];
+        };
         Returns: string;
       };
       is_org_member: {
