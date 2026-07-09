@@ -5,6 +5,10 @@ import { InviteForm } from './invite-form';
 import { RevokeInviteButton } from './revoke-invite-button';
 import { DigestToggle } from './digest-toggle';
 import { EscalationThresholdForm } from './escalation-threshold-form';
+import { OrgProfileForm } from './org-profile-form';
+import { MembersTable } from './members-table';
+import { DangerZone } from './danger-zone';
+import { getOrgMembersAction, getArchivableProjectsAction } from './org-members-actions';
 
 export default async function AdminPage() {
   const membership = await getCurrentOrgMembership();
@@ -22,9 +26,12 @@ export default async function AdminPage() {
 
   let invites: { id: string; email: string; org_role: string; expires_at: string }[] = [];
   let escalationThresholdHours = 24;
+  let orgMembers: Awaited<ReturnType<typeof getOrgMembersAction>> = [];
+  let archivableProjects: Awaited<ReturnType<typeof getArchivableProjectsAction>> = [];
+
   if (isOwnerOrAdmin) {
     const supabase = createClient();
-    const [{ data: invitesData }, { data: org }] = await Promise.all([
+    const [{ data: invitesData }, { data: org }, members, projects] = await Promise.all([
       supabase
         .from('org_invites')
         .select('id, email, org_role, expires_at, created_at')
@@ -36,9 +43,13 @@ export default async function AdminPage() {
         .select('escalation_threshold_hours')
         .eq('id', membership.orgId)
         .maybeSingle(),
+      getOrgMembersAction(),
+      getArchivableProjectsAction(),
     ]);
     invites = invitesData ?? [];
     escalationThresholdHours = org?.escalation_threshold_hours ?? 24;
+    orgMembers = members;
+    archivableProjects = projects;
   }
 
   return (
@@ -55,6 +66,16 @@ export default async function AdminPage() {
 
       {isOwnerOrAdmin && (
         <>
+          <section className="rounded-xl border border-border bg-card p-4">
+            <h2 className="mb-3 text-sm font-semibold text-foreground">Organization profile</h2>
+            <OrgProfileForm orgId={membership.orgId} initialName={membership.orgName} />
+          </section>
+
+          <section className="rounded-xl border border-border bg-card p-4">
+            <h2 className="mb-3 text-sm font-semibold text-foreground">Members</h2>
+            <MembersTable initialMembers={orgMembers} currentUserId={membership.userId} />
+          </section>
+
           <section className="rounded-xl border border-border bg-card p-4">
             <h2 className="mb-3 text-sm font-semibold text-foreground">Escalation alerts</h2>
             <EscalationThresholdForm orgId={membership.orgId} initialHours={escalationThresholdHours} />
@@ -84,6 +105,11 @@ export default async function AdminPage() {
                 ))}
               </ul>
             )}
+          </section>
+
+          <section className="rounded-xl border border-destructive/40 bg-card p-4">
+            <h2 className="mb-3 text-sm font-semibold text-destructive">Danger zone</h2>
+            <DangerZone initialProjects={archivableProjects} />
           </section>
         </>
       )}
