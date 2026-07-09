@@ -47,7 +47,10 @@ async function insertAssignees(
   return { error, doers };
 }
 
-async function notifyDoers(
+/** Notifies newly-assigned doers AND writes the activity_log rows the P16
+ * column chat drawer renders as system messages ("X created this task",
+ * "X assigned Y"). One shared org_id lookup for both. */
+async function notifyAndLogTaskCreated(
   supabase: ReturnType<typeof createClient>,
   projectId: string,
   taskId: string,
@@ -56,8 +59,28 @@ async function notifyDoers(
   actingUserId: string,
 ) {
   const { data: orgId } = await supabase.rpc('get_project_org_id', { check_project_id: projectId });
-  if (orgId) {
-    await notifyTaskAssigned(supabase, orgId, taskId, taskTitle, projectId, doers, actingUserId);
+  if (!orgId) return;
+
+  await supabase.from('activity_log').insert({
+    org_id: orgId,
+    actor_id: actingUserId,
+    entity_type: 'task',
+    entity_id: taskId,
+    action: 'task_created',
+    metadata: { title: taskTitle },
+  });
+
+  await notifyTaskAssigned(supabase, orgId, taskId, taskTitle, projectId, doers, actingUserId);
+
+  if (doers.length > 0) {
+    await supabase.from('activity_log').insert({
+      org_id: orgId,
+      actor_id: actingUserId,
+      entity_type: 'task',
+      entity_id: taskId,
+      action: 'assigned',
+      metadata: { title: taskTitle, assigneeIds: doers },
+    });
   }
 }
 
@@ -94,7 +117,7 @@ export async function createQuickTaskAction(
 
   const { error: assigneeError, doers } = await insertAssignees(supabase, task.id, user.id, []);
   if (assigneeError) return { error: assigneeError.message };
-  await notifyDoers(supabase, projectId, task.id, parsed.data.title, doers, user.id);
+  await notifyAndLogTaskCreated(supabase, projectId, task.id, parsed.data.title, doers, user.id);
 
   revalidatePath(`/projects/${projectId}/board`);
   return { error: null, taskId: task.id };
@@ -207,7 +230,7 @@ export async function createTaskAction(
 
   const { error: assigneeError, doers } = await insertAssignees(supabase, task.id, user.id, assigneeIds);
   if (assigneeError) return { error: assigneeError.message };
-  await notifyDoers(supabase, projectId, task.id, title, doers, user.id);
+  await notifyAndLogTaskCreated(supabase, projectId, task.id, title, doers, user.id);
 
   if (checklist.length > 0) {
     const { error: checklistError } = await supabase.from('task_checklist_items').insert(

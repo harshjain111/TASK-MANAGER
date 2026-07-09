@@ -18,6 +18,7 @@ import type { TaskCardData } from '@/components/tasks/task-card';
 import type { PickableMember } from '@/components/tasks/assignee-picker';
 import type { TaskStatus } from '@/types/domain';
 import { TaskDetailSheet } from '@/components/tasks/task-detail-sheet';
+import { ChatDrawer } from './chat-drawer';
 
 export function Board({
   projectId,
@@ -37,6 +38,7 @@ export function Board({
   const [orderedColumns, setOrderedColumns] = useState(columns);
   const [tasksState, setTasksState] = useState(tasksByColumn);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
+  const [chatColumn, setChatColumn] = useState<{ id: string; name: string } | null>(null);
   useEffect(() => setOrderedColumns(columns), [columns]);
   useEffect(() => setTasksState(tasksByColumn), [tasksByColumn]);
 
@@ -158,6 +160,7 @@ export function Board({
               canManage={canManage}
               onStatusChange={handleStatusChange}
               onOpenTask={setSelectedTaskId}
+              onOpenChat={(id, name) => setChatColumn({ id, name })}
             />
           ))}
         </SortableContext>
@@ -170,6 +173,13 @@ export function Board({
         taskId={selectedTaskId}
         members={members}
         onOpenChange={(open) => !open && setSelectedTaskId(null)}
+      />
+
+      <ChatDrawer
+        projectId={projectId}
+        columnId={chatColumn?.id ?? null}
+        columnName={chatColumn?.name ?? ''}
+        onOpenChange={(open) => !open && setChatColumn(null)}
       />
     </div>
   );

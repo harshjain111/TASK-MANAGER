@@ -5,7 +5,7 @@ import { useSortable } from '@dnd-kit/sortable';
 import { useDroppable } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { GripVertical, MoreHorizontal, Archive, Pencil, Eye, EyeOff } from 'lucide-react';
+import { GripVertical, MoreHorizontal, Archive, Pencil, Eye, EyeOff, MessageSquare } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
   DropdownMenu,
@@ -38,6 +38,7 @@ export function BoardColumn({
   canManage,
   onStatusChange,
   onOpenTask,
+  onOpenChat,
 }: {
   projectId: string;
   column: BoardColumnData;
@@ -46,6 +47,7 @@ export function BoardColumn({
   canManage: boolean;
   onStatusChange: (taskId: string, next: ReturnType<typeof nextTaskStatus>) => void;
   onOpenTask: (taskId: string) => void;
+  onOpenChat: (columnId: string, columnName: string) => void;
 }) {
   const [isRenaming, setIsRenaming] = useState(false);
   const [name, setName] = useState(column.name);
@@ -119,12 +121,29 @@ export function BoardColumn({
             className="h-7 flex-1 text-sm"
           />
         ) : (
-          <span className="flex-1 truncate text-sm font-semibold text-foreground">{column.name}</span>
+          <button
+            type="button"
+            title="Open column chat"
+            onClick={() => onOpenChat(column.id, column.name)}
+            className="flex-1 truncate text-left text-sm font-semibold text-foreground hover:underline"
+          >
+            {column.name}
+          </button>
         )}
 
         <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
           {column.doneCount}/{column.totalCount}
         </span>
+
+        <button
+          type="button"
+          aria-label="Open column chat"
+          title="Open column chat"
+          onClick={() => onOpenChat(column.id, column.name)}
+          className="rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+        >
+          <MessageSquare className="size-3.5" />
+        </button>
 
         <button
           type="button"
