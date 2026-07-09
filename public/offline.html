@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Flowdesk — Offline</title>
+  <style>
+    body {
+      margin: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #ffffff;
+      color: #171717;
+      text-align: center;
+      padding: 24px;
+    }
+    .card { max-width: 360px; }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      background: #6366F1;
+      color: #fff;
+      font-weight: 700;
+      font-size: 24px;
+      margin-bottom: 16px;
+    }
+    h1 { font-size: 18px; margin: 0 0 8px; }
+    p { font-size: 14px; color: #737373; margin: 0; }
+    @media (prefers-color-scheme: dark) {
+      body { background: #0a0a0a; color: #fafafa; }
+      p { color: #a3a3a3; }
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="badge">F</div>
+    <h1>You're offline</h1>
+    <p>Flowdesk needs a connection to load new data. Reconnect and try again.</p>
+  </div>
+</body>
+</html>
