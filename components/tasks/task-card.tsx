@@ -2,16 +2,20 @@ import { formatDistanceToNow } from 'date-fns';
 import { MessageSquare, ListChecks } from 'lucide-react';
 import { Avatar } from '@/components/shared/avatar';
 import { StatusPill } from '@/components/shared/status-pill';
+import { KudosButton } from '@/components/shared/kudos-button';
 import type { TaskStatus } from '@/types/domain';
 
 export type TaskCardData = {
   id: string;
+  projectId: string;
+  columnId: string;
   title: string;
   status: TaskStatus;
   assignees: { userId: string; name: string }[];
   checklistDone: number;
   checklistTotal: number;
   commentCount: number;
+  kudosCount: number;
   createdAt: string;
   updatedAt: string;
 };
@@ -26,6 +30,8 @@ export function TaskCard({
   /** Omit to render a non-interactive pill (e.g. read-only contexts). */
   onStatusClick?: () => void;
 }) {
+  const primaryAssignee = task.assignees[0];
+
   return (
     <div className="flex w-full flex-col gap-2 rounded-lg border border-border bg-card p-3 text-left shadow-sm transition-shadow hover:shadow-md">
       <button
@@ -68,6 +74,15 @@ export function TaskCard({
             <MessageSquare className="size-3.5" />
             {task.commentCount}
           </span>
+          {task.status === 'done' && primaryAssignee && (
+            <KudosButton
+              projectId={task.projectId}
+              taskId={task.id}
+              columnId={task.columnId}
+              toUserId={primaryAssignee.userId}
+              count={task.kudosCount}
+            />
+          )}
         </div>
         <span title={new Date(task.updatedAt).toLocaleString()}>
           {task.updatedAt === task.createdAt ? 'Added ' : 'Updated '}

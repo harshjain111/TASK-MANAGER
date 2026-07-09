@@ -35,6 +35,7 @@ export default async function BoardPage({ params }: { params: { projectId: strin
         { data: checklistRows },
         { data: memberRows },
         { data: messageRows },
+        { data: kudosRows },
         membership,
         { data: projectMember },
       ] = await Promise.all([
@@ -68,6 +69,10 @@ export default async function BoardPage({ params }: { params: { projectId: strin
           .select('task_id, board_columns!inner(project_id)')
           .eq('board_columns.project_id', project.id)
           .not('task_id', 'is', null),
+        supabase
+          .from('kudos')
+          .select('task_id, tasks!inner(project_id)')
+          .eq('tasks.project_id', project.id),
         getCurrentOrgMembership(),
         supabase
           .from('project_members')
@@ -98,6 +103,12 @@ export default async function BoardPage({ params }: { params: { projectId: strin
         commentCountByTask.set(row.task_id, (commentCountByTask.get(row.task_id) ?? 0) + 1);
       }
 
+      const kudosCountByTask = new Map<string, number>();
+      for (const row of kudosRows ?? []) {
+        if (!row.task_id) continue;
+        kudosCountByTask.set(row.task_id, (kudosCountByTask.get(row.task_id) ?? 0) + 1);
+      }
+
       const doneByColumn = new Map<string, { done: number; total: number }>();
       tasksByColumn = {};
       for (const task of taskRows ?? []) {
@@ -109,12 +120,15 @@ export default async function BoardPage({ params }: { params: { projectId: strin
         const checklist = checklistByTask.get(task.id) ?? { done: 0, total: 0 };
         const card: TaskCardData = {
           id: task.id,
+          projectId: project.id,
+          columnId: task.column_id,
           title: task.title,
           status: task.status as TaskStatus,
           assignees: assigneesByTask.get(task.id) ?? [],
           checklistDone: checklist.done,
           checklistTotal: checklist.total,
           commentCount: commentCountByTask.get(task.id) ?? 0,
+          kudosCount: kudosCountByTask.get(task.id) ?? 0,
           createdAt: task.created_at,
           updatedAt: task.updated_at,
         };
