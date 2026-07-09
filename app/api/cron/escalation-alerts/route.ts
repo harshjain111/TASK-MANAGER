@@ -10,6 +10,18 @@ const STUCK_THRESHOLD_HOURS = 24;
  * route is the target a scheduled job hits, guarded by CRON_SECRET.
  */
 export async function POST(request: NextRequest) {
+  return runEscalation(request);
+}
+
+// Vercel Cron only ever issues GET requests (with the CRON_SECRET as a
+// Bearer header when the env var of the same name is set on the project),
+// so this route must respond to both verbs — POST for any other scheduler
+// (Supabase Edge Function, GitHub Actions) that can send a custom method.
+export async function GET(request: NextRequest) {
+  return runEscalation(request);
+}
+
+async function runEscalation(request: NextRequest) {
   if (!process.env.CRON_SECRET) {
     return NextResponse.json({ error: 'CRON_SECRET not configured' }, { status: 500 });
   }
