@@ -19,22 +19,39 @@ export type TaskDetail = {
   createdAt: string;
   updatedAt: string;
   assigneeIds: string[];
+  canApprove: boolean;
   checklist: { id: string; label: string; isDone: boolean; position: number }[];
   attachments: { id: string; fileName: string; fileUrl: string; createdAt: string }[];
   comments: { id: string; authorId: string; authorName: string; body: string | null; createdAt: string }[];
 };
 
 export async function getTaskDetailAction(taskId: string): Promise<TaskDetail | null> {
-  const supabase = createClient();
+  try {
+    const supabase = createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
-  const [{ data: task }, { data: assignees }, { data: checklist }, { data: attachments }, { data: comments }] =
-    await Promise.all([
+    const [
+      { data: task },
+      { data: assignees },
+      { data: delegator },
+      { data: checklist },
+      { data: attachments },
+      { data: comments },
+    ] = await Promise.all([
       supabase
         .from('tasks')
         .select('id, title, description, status, priority, due_at, column_id, created_at, updated_at')
         .eq('id', taskId)
         .maybeSingle(),
       supabase.from('task_assignees').select('user_id').eq('task_id', taskId).eq('is_delegator', false),
+      supabase
+        .from('task_assignees')
+        .select('user_id')
+        .eq('task_id', taskId)
+        .eq('is_delegator', true)
+        .maybeSingle(),
       supabase
         .from('task_checklist_items')
         .select('id, label, is_done, position')
@@ -52,42 +69,46 @@ export async function getTaskDetailAction(taskId: string): Promise<TaskDetail | 
         .order('created_at', { ascending: true }),
     ]);
 
-  if (!task) return null;
+    if (!task) return null;
 
-  return {
-    id: task.id,
-    title: task.title,
-    description: task.description,
-    status: task.status,
-    priority: task.priority,
-    dueAt: task.due_at,
-    columnId: task.column_id,
-    createdAt: task.created_at,
-    updatedAt: task.updated_at,
-    assigneeIds: (assignees ?? []).map((a) => a.user_id),
-    checklist: (checklist ?? []).map((c) => ({
-      id: c.id,
-      label: c.label,
-      isDone: c.is_done,
-      position: c.position,
-    })),
-    attachments: (attachments ?? []).map((a) => ({
-      id: a.id,
-      fileName: a.file_name,
-      fileUrl: a.file_url,
-      createdAt: a.created_at,
-    })),
-    comments: (comments ?? []).map((c) => {
-      const profile = c.profiles as unknown as ProfileRef;
-      return {
+    return {
+      id: task.id,
+      title: task.title,
+      description: task.description,
+      status: task.status,
+      priority: task.priority,
+      dueAt: task.due_at,
+      columnId: task.column_id,
+      createdAt: task.created_at,
+      updatedAt: task.updated_at,
+      assigneeIds: (assignees ?? []).map((a) => a.user_id),
+      canApprove: task.status === 'review' && !!user && delegator?.user_id === user.id,
+      checklist: (checklist ?? []).map((c) => ({
         id: c.id,
-        authorId: c.author_id,
-        authorName: profile?.full_name || profile?.email || 'Unknown',
-        body: c.body,
-        createdAt: c.created_at,
-      };
-    }),
-  };
+        label: c.label,
+        isDone: c.is_done,
+        position: c.position,
+      })),
+      attachments: (attachments ?? []).map((a) => ({
+        id: a.id,
+        fileName: a.file_name,
+        fileUrl: a.file_url,
+        createdAt: a.created_at,
+      })),
+      comments: (comments ?? []).map((c) => {
+        const profile = c.profiles as unknown as ProfileRef;
+        return {
+          id: c.id,
+          authorId: c.author_id,
+          authorName: profile?.full_name || profile?.email || 'Unknown',
+          body: c.body,
+          createdAt: c.created_at,
+        };
+      }),
+    };
+  } catch {
+    return null;
+  }
 }
 
 export async function updateTaskDetailsAction(

@@ -123,19 +123,39 @@ export async function createQuickTaskAction(
   return { error: null, taskId: task.id };
 }
 
+type StatusActionResult = ActionResult & { appliedStatus?: TaskStatus };
+
 export async function updateTaskStatusAction(
   projectId: string,
   taskId: string,
   fromStatus: TaskStatus,
   toStatus: TaskStatus,
-): Promise<ActionResult> {
+): Promise<StatusActionResult> {
   const supabase = createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return { error: 'You must be signed in.' };
 
-  const { error } = await supabase.from('tasks').update({ status: toStatus }).eq('id', taskId);
+  // Delegated tasks (CLAUDE.md §1.2-§1.3): the assignee marking their work
+  // "done" doesn't close it outright — it lands in `review` for the
+  // delegator to Approve/Reopen (see approveTaskAction/reopenTaskAction).
+  let delegatorId: string | null = null;
+  let appliedStatus = toStatus;
+  if (toStatus === 'done') {
+    const { data: delegatorRow } = await supabase
+      .from('task_assignees')
+      .select('user_id')
+      .eq('task_id', taskId)
+      .eq('is_delegator', true)
+      .maybeSingle();
+    if (delegatorRow) {
+      delegatorId = delegatorRow.user_id;
+      appliedStatus = 'review';
+    }
+  }
+
+  const { error } = await supabase.from('tasks').update({ status: appliedStatus }).eq('id', taskId);
   if (error) return { error: error.message };
 
   const { data: orgId } = await supabase.rpc('get_project_org_id', { check_project_id: projectId });
@@ -146,8 +166,128 @@ export async function updateTaskStatusAction(
       entity_type: 'task',
       entity_id: taskId,
       action: 'status_changed',
-      metadata: { from: fromStatus, to: toStatus },
+      metadata: { from: fromStatus, to: appliedStatus },
     });
+
+    if (delegatorId && delegatorId !== user.id) {
+      const { data: task } = await supabase.from('tasks').select('title').eq('id', taskId).maybeSingle();
+      await supabase.from('notifications').insert({
+        org_id: orgId,
+        user_id: delegatorId,
+        type: 'task_review',
+        payload: { taskId, taskTitle: task?.title, projectId },
+      });
+    }
+  }
+
+  revalidatePath(`/projects/${projectId}/board`);
+  revalidatePath('/home');
+  return { error: null, appliedStatus };
+}
+
+export async function approveTaskAction(projectId: string, taskId: string): Promise<ActionResult> {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: 'You must be signed in.' };
+
+  const { data: task, error } = await supabase
+    .from('tasks')
+    .update({ status: 'done' })
+    .eq('id', taskId)
+    .select('title')
+    .single();
+  if (error) return { error: error.message };
+
+  const { data: orgId } = await supabase.rpc('get_project_org_id', { check_project_id: projectId });
+  if (orgId) {
+    await supabase.from('activity_log').insert({
+      org_id: orgId,
+      actor_id: user.id,
+      entity_type: 'task',
+      entity_id: taskId,
+      action: 'approved',
+      metadata: { title: task.title },
+    });
+
+    const { data: primary } = await supabase
+      .from('task_assignees')
+      .select('user_id')
+      .eq('task_id', taskId)
+      .eq('is_primary', true)
+      .maybeSingle();
+    if (primary && primary.user_id !== user.id) {
+      await supabase.from('notifications').insert({
+        org_id: orgId,
+        user_id: primary.user_id,
+        type: 'task_approved',
+        payload: { taskId, taskTitle: task.title, projectId },
+      });
+    }
+  }
+
+  revalidatePath(`/projects/${projectId}/board`);
+  revalidatePath('/home');
+  return { error: null };
+}
+
+export async function reopenTaskAction(
+  projectId: string,
+  taskId: string,
+  columnId: string,
+  comment: string,
+): Promise<ActionResult> {
+  const trimmed = comment.trim();
+  if (!trimmed) return { error: 'A comment is required when reopening a task.' };
+
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: 'You must be signed in.' };
+
+  const { data: task, error } = await supabase
+    .from('tasks')
+    .update({ status: 'in_progress' })
+    .eq('id', taskId)
+    .select('title')
+    .single();
+  if (error) return { error: error.message };
+
+  await supabase.from('chat_messages').insert({
+    column_id: columnId,
+    task_id: taskId,
+    author_id: user.id,
+    body: trimmed,
+    message_type: 'text',
+  });
+
+  const { data: orgId } = await supabase.rpc('get_project_org_id', { check_project_id: projectId });
+  if (orgId) {
+    await supabase.from('activity_log').insert({
+      org_id: orgId,
+      actor_id: user.id,
+      entity_type: 'task',
+      entity_id: taskId,
+      action: 'reopened',
+      metadata: { title: task.title, comment: trimmed },
+    });
+
+    const { data: primary } = await supabase
+      .from('task_assignees')
+      .select('user_id')
+      .eq('task_id', taskId)
+      .eq('is_primary', true)
+      .maybeSingle();
+    if (primary && primary.user_id !== user.id) {
+      await supabase.from('notifications').insert({
+        org_id: orgId,
+        user_id: primary.user_id,
+        type: 'task_reopened',
+        payload: { taskId, taskTitle: task.title, projectId },
+      });
+    }
   }
 
   revalidatePath(`/projects/${projectId}/board`);

@@ -9,6 +9,7 @@ import { AssigneePicker, type PickableMember } from './assignee-picker';
 import { ChecklistEditor } from './checklist-editor';
 import { AttachmentsList } from './attachments-list';
 import { TaskComments } from './task-comments';
+import { ApprovalPanel } from './approval-panel';
 import {
   getTaskDetailAction,
   updateTaskDetailsAction,
@@ -66,6 +67,17 @@ export function TaskDetailSheet({
             </SheetHeader>
 
             <div className="flex flex-1 flex-col gap-5 overflow-auto p-4">
+              {detail.canApprove && (
+                <ApprovalPanel
+                  projectId={projectId}
+                  taskId={detail.id}
+                  columnId={detail.columnId}
+                  onResolved={(newStatus) =>
+                    setDetail((prev) => (prev ? { ...prev, status: newStatus, canApprove: false } : prev))
+                  }
+                />
+              )}
+
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="detail-description">Description</Label>
                 <textarea

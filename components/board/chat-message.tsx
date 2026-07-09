@@ -14,6 +14,10 @@ function systemLine(item: Extract<FeedItem, { kind: 'system' }>): string {
       const to = item.metadata.to as string | undefined;
       return `${item.actorName} marked "${title}" as ${to?.replace('_', ' ') ?? 'updated'}`;
     }
+    case 'approved':
+      return `${item.actorName} approved "${title}"`;
+    case 'reopened':
+      return `${item.actorName} reopened "${title}"`;
     default:
       return `${item.actorName} updated "${title}"`;
   }

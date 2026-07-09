@@ -65,7 +65,22 @@ export function Board({
       }
       return copy;
     });
-    if (fromStatus) void updateTaskStatusAction(projectId, taskId, fromStatus, next);
+    if (!fromStatus) return;
+    void updateTaskStatusAction(projectId, taskId, fromStatus, next).then((result) => {
+      // Delegated tasks land in `review`, not `done` — reconcile the
+      // optimistic update if the server overrode our guess.
+      if (result.appliedStatus && result.appliedStatus !== next) {
+        setTasksState((prev) => {
+          const copy: Record<string, TaskCardData[]> = {};
+          for (const [columnId, tasks] of Object.entries(prev)) {
+            copy[columnId] = tasks.map((t) =>
+              t.id === taskId ? { ...t, status: result.appliedStatus! } : t,
+            );
+          }
+          return copy;
+        });
+      }
+    });
   };
 
   const findTaskColumn = (taskId: string) =>
