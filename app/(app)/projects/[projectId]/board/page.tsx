@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation';
+import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { getCurrentOrgMembership } from '@/lib/supabase/org';
 import { Board } from '@/components/board/board';
@@ -168,7 +169,15 @@ export default async function BoardPage({ params }: { params: { projectId: strin
           {project.name.slice(0, 1).toUpperCase()}
         </span>
         <h1 className="text-sm font-semibold text-foreground">{project.name}</h1>
-        <div className="ml-auto">
+        <div className="ml-auto flex items-center gap-1">
+          {canManage && (
+            <Link
+              href={`/projects/${project.id}/members`}
+              className="rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-muted hover:text-foreground"
+            >
+              Members
+            </Link>
+          )}
           <ProjectMuteToggle projectId={project.id} />
         </div>
       </div>

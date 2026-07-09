@@ -690,6 +690,30 @@ export interface Database {
         };
         Relationships: [];
       };
+      project_column_access: {
+        Row: {
+          id: string;
+          project_id: string;
+          user_id: string;
+          column_id: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          project_id: string;
+          user_id: string;
+          column_id: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          project_id?: string;
+          user_id?: string;
+          column_id?: string;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {
@@ -765,6 +789,14 @@ export interface Database {
       generate_overdue_karma_occurrences: {
         Args: Record<string, never>;
         Returns: number;
+      };
+      is_project_guest: {
+        Args: { check_project_id: string };
+        Returns: boolean;
+      };
+      can_view_column: {
+        Args: { check_column_id: string };
+        Returns: boolean;
       };
     };
     Enums: {

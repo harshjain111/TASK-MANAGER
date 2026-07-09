@@ -35,3 +35,5 @@ export type Kudos = Database['public']['Tables']['kudos']['Row'];
 export type KudosKind = Database['public']['Enums']['kudos_kind'];
 
 export type Reward = Database['public']['Tables']['rewards']['Row'];
+
+export type ProjectColumnAccess = Database['public']['Tables']['project_column_access']['Row'];
