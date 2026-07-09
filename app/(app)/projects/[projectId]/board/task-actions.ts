@@ -112,6 +112,7 @@ export async function updateTaskStatusAction(
   }
 
   revalidatePath(`/projects/${projectId}/board`);
+  revalidatePath('/home');
   return { error: null };
 }
 
