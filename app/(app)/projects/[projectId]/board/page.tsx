@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { getCurrentOrgMembership } from '@/lib/supabase/org';
 import { Board } from '@/components/board/board';
+import { ProjectMuteToggle } from '@/components/board/project-mute-toggle';
 import type { BoardColumnData } from '@/components/board/board-column';
 import type { TaskCardData } from '@/components/tasks/task-card';
 import type { PickableMember } from '@/components/tasks/assignee-picker';
@@ -33,6 +34,7 @@ export default async function BoardPage({ params }: { params: { projectId: strin
         { data: assigneeRows },
         { data: checklistRows },
         { data: memberRows },
+        { data: messageRows },
         membership,
         { data: projectMember },
       ] = await Promise.all([
@@ -61,6 +63,11 @@ export default async function BoardPage({ params }: { params: { projectId: strin
           .from('project_members')
           .select('user_id, profiles(full_name, email)')
           .eq('project_id', project.id),
+        supabase
+          .from('chat_messages')
+          .select('task_id, board_columns!inner(project_id)')
+          .eq('board_columns.project_id', project.id)
+          .not('task_id', 'is', null),
         getCurrentOrgMembership(),
         supabase
           .from('project_members')
@@ -85,6 +92,12 @@ export default async function BoardPage({ params }: { params: { projectId: strin
         checklistByTask.set(row.task_id, entry);
       }
 
+      const commentCountByTask = new Map<string, number>();
+      for (const row of messageRows ?? []) {
+        if (!row.task_id) continue;
+        commentCountByTask.set(row.task_id, (commentCountByTask.get(row.task_id) ?? 0) + 1);
+      }
+
       const doneByColumn = new Map<string, { done: number; total: number }>();
       tasksByColumn = {};
       for (const task of taskRows ?? []) {
@@ -101,7 +114,7 @@ export default async function BoardPage({ params }: { params: { projectId: strin
           assignees: assigneesByTask.get(task.id) ?? [],
           checklistDone: checklist.done,
           checklistTotal: checklist.total,
-          commentCount: 0, // wired up in P16 (column chat / task threads)
+          commentCount: commentCountByTask.get(task.id) ?? 0,
           createdAt: task.created_at,
           updatedAt: task.updated_at,
         };
@@ -141,6 +154,9 @@ export default async function BoardPage({ params }: { params: { projectId: strin
           {project.name.slice(0, 1).toUpperCase()}
         </span>
         <h1 className="text-sm font-semibold text-foreground">{project.name}</h1>
+        <div className="ml-auto">
+          <ProjectMuteToggle projectId={project.id} />
+        </div>
       </div>
       <div className="min-h-0 flex-1">
         <Board

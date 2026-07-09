@@ -21,6 +21,7 @@ import { CreateTaskDialog } from '@/components/tasks/create-task-dialog';
 import { QuickTaskInput } from '@/components/tasks/quick-task-input';
 import type { PickableMember } from '@/components/tasks/assignee-picker';
 import type { nextTaskStatus } from '@/lib/utils/task-status';
+import { ColumnMuteToggle } from './column-mute-toggle';
 
 export type BoardColumnData = {
   id: string;
@@ -39,6 +40,7 @@ export function BoardColumn({
   onStatusChange,
   onOpenTask,
   onOpenChat,
+  muted,
 }: {
   projectId: string;
   column: BoardColumnData;
@@ -48,6 +50,7 @@ export function BoardColumn({
   onStatusChange: (taskId: string, next: ReturnType<typeof nextTaskStatus>) => void;
   onOpenTask: (taskId: string) => void;
   onOpenChat: (columnId: string, columnName: string) => void;
+  muted: boolean;
 }) {
   const [isRenaming, setIsRenaming] = useState(false);
   const [name, setName] = useState(column.name);
@@ -144,6 +147,8 @@ export function BoardColumn({
         >
           <MessageSquare className="size-3.5" />
         </button>
+
+        <ColumnMuteToggle columnId={column.id} initiallyMuted={muted} />
 
         <button
           type="button"

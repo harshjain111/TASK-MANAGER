@@ -544,6 +544,30 @@ export interface Database {
           },
         ];
       };
+      mutes: {
+        Row: {
+          id: string;
+          user_id: string;
+          project_id: string | null;
+          column_id: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          project_id?: string | null;
+          column_id?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          project_id?: string | null;
+          column_id?: string | null;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {
@@ -597,6 +621,14 @@ export interface Database {
       };
       can_manage_project: {
         Args: { check_project_id: string };
+        Returns: boolean;
+      };
+      is_project_muted: {
+        Args: { check_project_id: string };
+        Returns: boolean;
+      };
+      is_column_muted: {
+        Args: { check_column_id: string };
         Returns: boolean;
       };
     };

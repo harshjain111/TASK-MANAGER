@@ -25,3 +25,5 @@ export type ActivityLogEntry = Database['public']['Tables']['activity_log']['Row
 export type Notification = Database['public']['Tables']['notifications']['Row'];
 
 export type Profile = Database['public']['Tables']['profiles']['Row'];
+
+export type Mute = Database['public']['Tables']['mutes']['Row'];

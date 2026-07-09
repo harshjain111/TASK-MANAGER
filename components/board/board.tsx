@@ -19,6 +19,7 @@ import type { PickableMember } from '@/components/tasks/assignee-picker';
 import type { TaskStatus } from '@/types/domain';
 import { TaskDetailSheet } from '@/components/tasks/task-detail-sheet';
 import { ChatDrawer } from './chat-drawer';
+import { getMuteStateAction } from '@/app/(app)/projects/[projectId]/board/mute-actions';
 
 export function Board({
   projectId,
@@ -39,8 +40,12 @@ export function Board({
   const [tasksState, setTasksState] = useState(tasksByColumn);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [chatColumn, setChatColumn] = useState<{ id: string; name: string } | null>(null);
+  const [mutedColumnIds, setMutedColumnIds] = useState<string[]>([]);
   useEffect(() => setOrderedColumns(columns), [columns]);
   useEffect(() => setTasksState(tasksByColumn), [tasksByColumn]);
+  useEffect(() => {
+    getMuteStateAction(projectId).then((state) => setMutedColumnIds(state.mutedColumnIds));
+  }, [projectId]);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
 
@@ -161,6 +166,7 @@ export function Board({
               onStatusChange={handleStatusChange}
               onOpenTask={setSelectedTaskId}
               onOpenChat={(id, name) => setChatColumn({ id, name })}
+              muted={mutedColumnIds.includes(column.id)}
             />
           ))}
         </SortableContext>
