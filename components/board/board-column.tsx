@@ -2,8 +2,10 @@
 
 import { useState, useTransition } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
+import { useDroppable } from '@dnd-kit/core';
+import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { GripVertical, MoreHorizontal, Archive, Pencil } from 'lucide-react';
+import { GripVertical, MoreHorizontal, Archive, Pencil, Eye, EyeOff } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
   DropdownMenu,
@@ -13,6 +15,12 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { renameColumnAction, archiveColumnAction } from '@/app/(app)/projects/[projectId]/board/actions';
+import { SortableTaskCard } from './sortable-task-card';
+import type { TaskCardData } from '@/components/tasks/task-card';
+import { CreateTaskDialog } from '@/components/tasks/create-task-dialog';
+import { QuickTaskInput } from '@/components/tasks/quick-task-input';
+import type { PickableMember } from '@/components/tasks/assignee-picker';
+import type { nextTaskStatus } from '@/lib/utils/task-status';
 
 export type BoardColumnData = {
   id: string;
@@ -25,21 +33,31 @@ export type BoardColumnData = {
 export function BoardColumn({
   projectId,
   column,
+  tasks,
+  members,
   canManage,
-  children,
+  onStatusChange,
 }: {
   projectId: string;
   column: BoardColumnData;
+  tasks: TaskCardData[];
+  members: PickableMember[];
   canManage: boolean;
-  children: React.ReactNode;
+  onStatusChange: (taskId: string, next: ReturnType<typeof nextTaskStatus>) => void;
 }) {
   const [isRenaming, setIsRenaming] = useState(false);
   const [name, setName] = useState(column.name);
+  const [showDone, setShowDone] = useState(true);
   const [isPending, startTransition] = useTransition();
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: column.id,
+    data: { type: 'column' },
     disabled: !canManage,
+  });
+  const { setNodeRef: setDroppableRef } = useDroppable({
+    id: `column:${column.id}`,
+    data: { type: 'column', columnId: column.id },
   });
 
   const style = {
@@ -59,6 +77,8 @@ export function BoardColumn({
       if (result.error) setName(column.name);
     });
   };
+
+  const visibleTasks = showDone ? tasks : tasks.filter((t) => t.status !== 'done');
 
   return (
     <div
@@ -104,6 +124,16 @@ export function BoardColumn({
           {column.doneCount}/{column.totalCount}
         </span>
 
+        <button
+          type="button"
+          aria-label={showDone ? 'Hide done tasks' : 'Show done tasks'}
+          title={showDone ? 'Hide done tasks' : 'Show done tasks'}
+          onClick={() => setShowDone((v) => !v)}
+          className="rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+        >
+          {showDone ? <Eye className="size-3.5" /> : <EyeOff className="size-3.5" />}
+        </button>
+
         {canManage && !isRenaming && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -136,7 +166,34 @@ export function BoardColumn({
         )}
       </div>
 
-      <div className="flex-1 overflow-auto p-2">{children}</div>
+      <div ref={setDroppableRef} className="flex-1 overflow-auto p-2">
+        <SortableContext
+          items={visibleTasks.map((t) => t.id)}
+          strategy={verticalListSortingStrategy}
+        >
+          <div className="flex flex-col gap-2">
+            {visibleTasks.length === 0 ? (
+              <p className="p-2 text-center text-xs text-muted-foreground">
+                {tasks.length === 0 ? 'No tasks yet.' : 'No tasks to show.'}
+              </p>
+            ) : (
+              visibleTasks.map((task) => (
+                <SortableTaskCard
+                  key={task.id}
+                  task={task}
+                  columnId={column.id}
+                  onStatusChange={onStatusChange}
+                />
+              ))
+            )}
+
+            <div className="flex items-center gap-1 border-t border-border/60 pt-2">
+              <CreateTaskDialog projectId={projectId} columnId={column.id} members={members} />
+              <QuickTaskInput projectId={projectId} columnId={column.id} />
+            </div>
+          </div>
+        </SortableContext>
+      </div>
     </div>
   );
 }

@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import { createTaskSchema, quickTaskSchema, type CreateTaskInput, type QuickTaskInput } from '@/lib/validations/task';
+import type { TaskStatus } from '@/types/domain';
 
 type ActionResult = { error: string | null; taskId?: string };
 
@@ -81,6 +82,75 @@ export async function createQuickTaskAction(
 
   revalidatePath(`/projects/${projectId}/board`);
   return { error: null, taskId: task.id };
+}
+
+export async function updateTaskStatusAction(
+  projectId: string,
+  taskId: string,
+  fromStatus: TaskStatus,
+  toStatus: TaskStatus,
+): Promise<ActionResult> {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: 'You must be signed in.' };
+
+  const { error } = await supabase.from('tasks').update({ status: toStatus }).eq('id', taskId);
+  if (error) return { error: error.message };
+
+  const { data: orgId } = await supabase.rpc('get_project_org_id', { check_project_id: projectId });
+  if (orgId) {
+    await supabase.from('activity_log').insert({
+      org_id: orgId,
+      actor_id: user.id,
+      entity_type: 'task',
+      entity_id: taskId,
+      action: 'status_changed',
+      metadata: { from: fromStatus, to: toStatus },
+    });
+  }
+
+  revalidatePath(`/projects/${projectId}/board`);
+  return { error: null };
+}
+
+/** Persists a drag-and-drop move: sets the moved task's column_id, then
+ * renumbers positions in the destination column (and the source column, if
+ * different) to match the client's final ordered arrays. */
+export async function moveTaskAction(
+  projectId: string,
+  movedTaskId: string,
+  destColumnId: string,
+  destOrderedTaskIds: string[],
+  sourceColumnId?: string,
+  sourceOrderedTaskIds?: string[],
+): Promise<ActionResult> {
+  const supabase = createClient();
+
+  const { error: columnError } = await supabase
+    .from('tasks')
+    .update({ column_id: destColumnId })
+    .eq('id', movedTaskId);
+  if (columnError) return { error: columnError.message };
+
+  const updates = [
+    ...destOrderedTaskIds.map((id, position) =>
+      supabase.from('tasks').update({ position }).eq('id', id),
+    ),
+    ...(sourceColumnId && sourceColumnId !== destColumnId
+      ? (sourceOrderedTaskIds ?? []).map((id, position) =>
+          supabase.from('tasks').update({ position }).eq('id', id),
+        )
+      : []),
+  ];
+
+  const results = await Promise.all(updates);
+  const failed = results.find((r) => r.error);
+  if (failed?.error) return { error: failed.error.message };
+
+  revalidatePath(`/projects/${projectId}/board`);
+  return { error: null };
 }
 
 export async function createTaskAction(

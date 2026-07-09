@@ -16,14 +16,25 @@ export type TaskCardData = {
   updatedAt: string;
 };
 
-export function TaskCard({ task, onClick }: { task: TaskCardData; onClick?: () => void }) {
+export function TaskCard({
+  task,
+  onClick,
+  onStatusClick,
+}: {
+  task: TaskCardData;
+  onClick?: () => void;
+  /** Omit to render a non-interactive pill (e.g. read-only contexts). */
+  onStatusClick?: () => void;
+}) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="flex w-full flex-col gap-2 rounded-lg border border-border bg-card p-3 text-left shadow-sm transition-shadow hover:shadow-md"
-    >
-      <p className="text-sm font-medium leading-snug text-foreground">{task.title}</p>
+    <div className="flex w-full flex-col gap-2 rounded-lg border border-border bg-card p-3 text-left shadow-sm transition-shadow hover:shadow-md">
+      <button
+        type="button"
+        onClick={onClick}
+        className="text-left text-sm font-medium leading-snug text-foreground"
+      >
+        {task.title}
+      </button>
 
       <div className="flex items-center justify-between">
         <div className="flex -space-x-1.5">
@@ -42,7 +53,7 @@ export function TaskCard({ task, onClick }: { task: TaskCardData; onClick?: () =
             </span>
           )}
         </div>
-        <StatusPill status={task.status} />
+        <StatusPill status={task.status} onClick={onStatusClick} />
       </div>
 
       <div className="flex items-center justify-between text-xs text-muted-foreground">
@@ -63,6 +74,6 @@ export function TaskCard({ task, onClick }: { task: TaskCardData; onClick?: () =
           {formatDistanceToNow(new Date(task.updatedAt), { addSuffix: true })}
         </span>
       </div>
-    </button>
+    </div>
   );
 }
