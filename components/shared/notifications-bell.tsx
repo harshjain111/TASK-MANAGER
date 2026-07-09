@@ -35,6 +35,8 @@ function describe(notification: NotificationRow): string {
       return `"${title}" was reopened`;
     case 'task_review':
       return `"${title}" is ready for your review`;
+    case 'task_escalated':
+      return `Escalated: "${title}" needs attention`;
     case 'mention':
       return `You were mentioned: "${notification.payload.body ?? ''}"`;
     default:

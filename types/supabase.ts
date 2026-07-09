@@ -20,6 +20,7 @@ export interface Database {
           id: string;
           name: string;
           created_by: string;
+          escalation_threshold_hours: number;
           created_at: string;
           archived_at: string | null;
         };
@@ -27,6 +28,7 @@ export interface Database {
           id?: string;
           name: string;
           created_by: string;
+          escalation_threshold_hours?: number;
           created_at?: string;
           archived_at?: string | null;
         };
@@ -34,6 +36,7 @@ export interface Database {
           id?: string;
           name?: string;
           created_by?: string;
+          escalation_threshold_hours?: number;
           created_at?: string;
           archived_at?: string | null;
         };
