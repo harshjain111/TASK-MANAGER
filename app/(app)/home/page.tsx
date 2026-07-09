@@ -1,11 +1,14 @@
 import { CalendarStrip } from '@/components/home/calendar-strip';
-import { TaskDelegationGrid } from '@/components/home/task-delegation-grid';
+import { HomeContent } from '@/components/home/home-content';
+import { isManagerAction } from './team-day-actions';
 
-export default function HomePage() {
+export default async function HomePage() {
+  const isManager = await isManagerAction();
+
   return (
     <div className="flex h-full flex-col overflow-auto">
       <CalendarStrip />
-      <TaskDelegationGrid />
+      <HomeContent isManager={isManager} />
     </div>
   );
 }
