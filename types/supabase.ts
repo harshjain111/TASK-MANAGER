@@ -494,6 +494,7 @@ export interface Database {
           avatar_url: string | null;
           email: string;
           digest_opt_out: boolean;
+          last_active_at: string | null;
           created_at: string;
         };
         Insert: {
@@ -502,6 +503,7 @@ export interface Database {
           avatar_url?: string | null;
           email: string;
           digest_opt_out?: boolean;
+          last_active_at?: string | null;
           created_at?: string;
         };
         Update: {
@@ -510,6 +512,7 @@ export interface Database {
           avatar_url?: string | null;
           email?: string;
           digest_opt_out?: boolean;
+          last_active_at?: string | null;
           created_at?: string;
         };
         Relationships: [];

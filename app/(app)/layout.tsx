@@ -1,5 +1,6 @@
 import { NavRail } from '@/components/shared/nav-rail';
 import { TopBar } from '@/components/shared/top-bar';
+import { PresenceHeartbeat } from '@/components/shared/presence-heartbeat';
 import { createClient } from '@/lib/supabase/server';
 
 async function getCurrentUserDisplay() {
@@ -27,6 +28,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-background">
+      <PresenceHeartbeat />
       <NavRail />
       <div className="flex min-w-0 flex-1 flex-col">
         <TopBar userId={userId} userName={userName} />
