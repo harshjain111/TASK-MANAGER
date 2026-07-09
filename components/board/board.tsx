@@ -13,14 +13,22 @@ import { SortableContext, horizontalListSortingStrategy, arrayMove } from '@dnd-
 import { BoardColumn, type BoardColumnData } from './board-column';
 import { AddColumnForm } from './add-column-form';
 import { reorderColumnsAction } from '@/app/(app)/projects/[projectId]/board/actions';
+import { TaskCard, type TaskCardData } from '@/components/tasks/task-card';
+import { CreateTaskDialog } from '@/components/tasks/create-task-dialog';
+import { QuickTaskInput } from '@/components/tasks/quick-task-input';
+import type { PickableMember } from '@/components/tasks/assignee-picker';
 
 export function Board({
   projectId,
   columns,
+  tasksByColumn,
+  members,
   canManage,
 }: {
   projectId: string;
   columns: BoardColumnData[];
+  tasksByColumn: Record<string, TaskCardData[]>;
+  members: PickableMember[];
   canManage: boolean;
 }) {
   // Local, optimistic copy of column order — synced whenever the server
@@ -61,13 +69,25 @@ export function Board({
           items={orderedColumns.map((c) => c.id)}
           strategy={horizontalListSortingStrategy}
         >
-          {orderedColumns.map((column) => (
-            <BoardColumn key={column.id} projectId={projectId} column={column} canManage={canManage}>
-              <p className="p-2 text-center text-xs text-muted-foreground">
-                Task cards land here in P10.
-              </p>
-            </BoardColumn>
-          ))}
+          {orderedColumns.map((column) => {
+            const tasks = tasksByColumn[column.id] ?? [];
+            return (
+              <BoardColumn key={column.id} projectId={projectId} column={column} canManage={canManage}>
+                <div className="flex flex-col gap-2">
+                  {tasks.length === 0 ? (
+                    <p className="p-2 text-center text-xs text-muted-foreground">No tasks yet.</p>
+                  ) : (
+                    tasks.map((task) => <TaskCard key={task.id} task={task} />)
+                  )}
+
+                  <div className="flex items-center gap-1 border-t border-border/60 pt-2">
+                    <CreateTaskDialog projectId={projectId} columnId={column.id} members={members} />
+                    <QuickTaskInput projectId={projectId} columnId={column.id} />
+                  </div>
+                </div>
+              </BoardColumn>
+            );
+          })}
         </SortableContext>
       </DndContext>
 

@@ -3,10 +3,17 @@ import { createClient } from '@/lib/supabase/server';
 import { getCurrentOrgMembership } from '@/lib/supabase/org';
 import { Board } from '@/components/board/board';
 import type { BoardColumnData } from '@/components/board/board-column';
+import type { TaskCardData } from '@/components/tasks/task-card';
+import type { PickableMember } from '@/components/tasks/assignee-picker';
+import type { TaskStatus } from '@/types/domain';
+
+type ProfileRef = { full_name: string; email: string } | null;
 
 export default async function BoardPage({ params }: { params: { projectId: string } }) {
   let project: { id: string; name: string; cover_color: string } | null = null;
   let columns: BoardColumnData[] = [];
+  let tasksByColumn: Record<string, TaskCardData[]> = {};
+  let members: PickableMember[] = [];
   let canManage = false;
 
   try {
@@ -20,42 +27,99 @@ export default async function BoardPage({ params }: { params: { projectId: strin
     project = projectRow;
 
     if (project) {
-      const [{ data: columnRows }, { data: taskRows }, membership, { data: projectMember }] =
-        await Promise.all([
-          supabase
-            .from('board_columns')
-            .select('id, name, position')
-            .eq('project_id', project.id)
-            .is('archived_at', null)
-            .order('position', { ascending: true }),
-          supabase
-            .from('tasks')
-            .select('column_id, status')
-            .eq('project_id', project.id)
-            .is('archived_at', null),
-          getCurrentOrgMembership(),
-          supabase
-            .from('project_members')
-            .select('project_role')
-            .eq('project_id', project.id)
-            .maybeSingle(),
-        ]);
+      const [
+        { data: columnRows },
+        { data: taskRows },
+        { data: assigneeRows },
+        { data: checklistRows },
+        { data: memberRows },
+        membership,
+        { data: projectMember },
+      ] = await Promise.all([
+        supabase
+          .from('board_columns')
+          .select('id, name, position')
+          .eq('project_id', project.id)
+          .is('archived_at', null)
+          .order('position', { ascending: true }),
+        supabase
+          .from('tasks')
+          .select('id, column_id, title, status, position, created_at, updated_at')
+          .eq('project_id', project.id)
+          .is('archived_at', null)
+          .order('position', { ascending: true }),
+        supabase
+          .from('task_assignees')
+          .select('task_id, user_id, is_delegator, profiles(full_name, email), tasks!inner(project_id)')
+          .eq('tasks.project_id', project.id)
+          .eq('is_delegator', false),
+        supabase
+          .from('task_checklist_items')
+          .select('task_id, is_done, tasks!inner(project_id)')
+          .eq('tasks.project_id', project.id),
+        supabase
+          .from('project_members')
+          .select('user_id, profiles(full_name, email)')
+          .eq('project_id', project.id),
+        getCurrentOrgMembership(),
+        supabase
+          .from('project_members')
+          .select('project_role')
+          .eq('project_id', project.id)
+          .maybeSingle(),
+      ]);
 
-      const counts = new Map<string, { done: number; total: number }>();
+      const assigneesByTask = new Map<string, { userId: string; name: string }[]>();
+      for (const row of assigneeRows ?? []) {
+        const profile = row.profiles as unknown as ProfileRef;
+        const list = assigneesByTask.get(row.task_id) ?? [];
+        list.push({ userId: row.user_id, name: profile?.full_name || profile?.email || 'Unknown' });
+        assigneesByTask.set(row.task_id, list);
+      }
+
+      const checklistByTask = new Map<string, { done: number; total: number }>();
+      for (const row of checklistRows ?? []) {
+        const entry = checklistByTask.get(row.task_id) ?? { done: 0, total: 0 };
+        entry.total += 1;
+        if (row.is_done) entry.done += 1;
+        checklistByTask.set(row.task_id, entry);
+      }
+
+      const doneByColumn = new Map<string, { done: number; total: number }>();
+      tasksByColumn = {};
       for (const task of taskRows ?? []) {
-        const entry = counts.get(task.column_id) ?? { done: 0, total: 0 };
+        const entry = doneByColumn.get(task.column_id) ?? { done: 0, total: 0 };
         entry.total += 1;
         if (task.status === 'done') entry.done += 1;
-        counts.set(task.column_id, entry);
+        doneByColumn.set(task.column_id, entry);
+
+        const checklist = checklistByTask.get(task.id) ?? { done: 0, total: 0 };
+        const card: TaskCardData = {
+          id: task.id,
+          title: task.title,
+          status: task.status as TaskStatus,
+          assignees: assigneesByTask.get(task.id) ?? [],
+          checklistDone: checklist.done,
+          checklistTotal: checklist.total,
+          commentCount: 0, // wired up in P16 (column chat / task threads)
+          createdAt: task.created_at,
+          updatedAt: task.updated_at,
+        };
+        tasksByColumn[task.column_id] = [...(tasksByColumn[task.column_id] ?? []), card];
       }
 
       columns = (columnRows ?? []).map((column) => ({
         id: column.id,
         name: column.name,
         position: column.position,
-        doneCount: counts.get(column.id)?.done ?? 0,
-        totalCount: counts.get(column.id)?.total ?? 0,
+        doneCount: doneByColumn.get(column.id)?.done ?? 0,
+        totalCount: doneByColumn.get(column.id)?.total ?? 0,
       }));
+
+      members = (memberRows ?? []).map((row) => {
+        const profile = row.profiles as unknown as ProfileRef;
+        return { userId: row.user_id, name: profile?.full_name || profile?.email || 'Unknown' };
+      });
 
       canManage =
         projectMember?.project_role === 'manager' ||
@@ -79,7 +143,13 @@ export default async function BoardPage({ params }: { params: { projectId: strin
         <h1 className="text-sm font-semibold text-foreground">{project.name}</h1>
       </div>
       <div className="min-h-0 flex-1">
-        <Board projectId={project.id} columns={columns} canManage={canManage} />
+        <Board
+          projectId={project.id}
+          columns={columns}
+          tasksByColumn={tasksByColumn}
+          members={members}
+          canManage={canManage}
+        />
       </div>
     </div>
   );
