@@ -663,6 +663,33 @@ export interface Database {
         };
         Relationships: [];
       };
+      rewards: {
+        Row: {
+          id: string;
+          org_id: string;
+          title: string;
+          description: string | null;
+          created_by: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          org_id: string;
+          title: string;
+          description?: string | null;
+          created_by: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          org_id?: string;
+          title?: string;
+          description?: string | null;
+          created_by?: string;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {

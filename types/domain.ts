@@ -33,3 +33,5 @@ export type KarmaRecurrenceType = Database['public']['Enums']['karma_recurrence_
 
 export type Kudos = Database['public']['Tables']['kudos']['Row'];
 export type KudosKind = Database['public']['Enums']['kudos_kind'];
+
+export type Reward = Database['public']['Tables']['rewards']['Row'];
