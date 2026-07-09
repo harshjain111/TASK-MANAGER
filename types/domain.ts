@@ -30,3 +30,6 @@ export type Mute = Database['public']['Tables']['mutes']['Row'];
 
 export type Karma = Database['public']['Tables']['karmas']['Row'];
 export type KarmaRecurrenceType = Database['public']['Enums']['karma_recurrence_type'];
+
+export type Kudos = Database['public']['Tables']['kudos']['Row'];
+export type KudosKind = Database['public']['Enums']['kudos_kind'];

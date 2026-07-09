@@ -11,6 +11,7 @@ export type TaskStatus = 'not_started' | 'in_progress' | 'stuck' | 'done' | 'rev
 export type TaskPriority = 'low' | 'medium' | 'high' | 'urgent';
 export type MessageType = 'text' | 'photo' | 'file' | 'system';
 export type KarmaRecurrenceType = 'daily' | 'weekly' | 'monthly' | 'custom';
+export type KudosKind = 'clap' | 'star' | 'team';
 
 export interface Database {
   public: {
@@ -632,6 +633,36 @@ export interface Database {
         };
         Relationships: [];
       };
+      kudos: {
+        Row: {
+          id: string;
+          org_id: string;
+          task_id: string | null;
+          from_user_id: string;
+          to_user_id: string;
+          kind: KudosKind;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          org_id: string;
+          task_id?: string | null;
+          from_user_id: string;
+          to_user_id: string;
+          kind?: KudosKind;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          org_id?: string;
+          task_id?: string | null;
+          from_user_id?: string;
+          to_user_id?: string;
+          kind?: KudosKind;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {
@@ -716,6 +747,7 @@ export interface Database {
       task_priority: TaskPriority;
       message_type: MessageType;
       karma_recurrence_type: KarmaRecurrenceType;
+      kudos_kind: KudosKind;
     };
     CompositeTypes: Record<string, never>;
   };
