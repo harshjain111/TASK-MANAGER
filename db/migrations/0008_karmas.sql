@@ -14,14 +14,17 @@
 --      schedule (pg_cron works too if enabled on the project). Neither can
 --      actually be *scheduled* here — that's a deployment-time step
 --      against a live project (P38), not something a migration can do.
+--
+-- user_id/delegated_by reference profiles(id), not auth.users(id) — see
+-- 0001's header (PostgREST embed resolution needs a direct FK).
 
 create type karma_recurrence_type as enum ('daily', 'weekly', 'monthly', 'custom');
 
 create table karmas (
   id uuid primary key default gen_random_uuid(),
   org_id uuid not null references organizations (id) on delete cascade,
-  user_id uuid not null references auth.users (id),
-  delegated_by uuid references auth.users (id),
+  user_id uuid not null references profiles (id),
+  delegated_by uuid references profiles (id),
   project_id uuid references projects (id) on delete set null,
   title text not null,
   description text,

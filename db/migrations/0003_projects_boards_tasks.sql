@@ -17,6 +17,11 @@
 -- instruction to confirm in the first migration that defines `tasks`):
 -- Karma stays a SEPARATE table (built in P20), not a `tasks` row with an
 -- `is_recurring`/`is_karma` flag. `tasks` below has no such column by design.
+--
+-- "Who did this" columns (project_members.user_id, task_assignees.user_id,
+-- chat_messages.author_id, activity_log.actor_id) reference profiles(id),
+-- not auth.users(id) directly — see 0001's header for why (PostgREST embed
+-- resolution needs a direct FK to the table being embedded).
 
 create type project_role as enum ('manager', 'employee', 'guest');
 create type task_status as enum ('not_started', 'in_progress', 'stuck', 'done', 'review');
@@ -50,7 +55,7 @@ create table projects (
 create table project_members (
   id uuid primary key default gen_random_uuid(),
   project_id uuid not null references projects (id) on delete cascade,
-  user_id uuid not null references auth.users (id) on delete cascade,
+  user_id uuid not null references profiles (id) on delete cascade,
   project_role project_role not null default 'employee',
   created_at timestamptz not null default now(),
   unique (project_id, user_id)
@@ -90,7 +95,7 @@ create trigger tasks_set_updated_at
 create table task_assignees (
   id uuid primary key default gen_random_uuid(),
   task_id uuid not null references tasks (id) on delete cascade,
-  user_id uuid not null references auth.users (id) on delete cascade,
+  user_id uuid not null references profiles (id) on delete cascade,
   is_primary boolean not null default true,
   is_delegator boolean not null default false,
   created_at timestamptz not null default now(),
@@ -110,7 +115,7 @@ create table chat_messages (
   id uuid primary key default gen_random_uuid(),
   column_id uuid not null references board_columns (id) on delete cascade,
   task_id uuid references tasks (id) on delete set null,
-  author_id uuid not null references auth.users (id),
+  author_id uuid not null references profiles (id),
   body text,
   attachment_url text,
   message_type message_type not null default 'text',
@@ -120,7 +125,7 @@ create table chat_messages (
 create table activity_log (
   id uuid primary key default gen_random_uuid(),
   org_id uuid not null references organizations (id) on delete cascade,
-  actor_id uuid not null references auth.users (id),
+  actor_id uuid not null references profiles (id),
   entity_type text not null,
   entity_id uuid not null,
   action text not null,
