@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
+import { useRouter } from 'next/navigation';
 import { useSortable } from '@dnd-kit/sortable';
 import { useDroppable } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
@@ -56,6 +57,7 @@ export function BoardColumn({
   const [name, setName] = useState(column.name);
   const [showDone, setShowDone] = useState(true);
   const [isPending, startTransition] = useTransition();
+  const router = useRouter();
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: column.id,
@@ -180,7 +182,8 @@ export function BoardColumn({
                 destructive
                 onSelect={() =>
                   startTransition(async () => {
-                    await archiveColumnAction(projectId, column.id);
+                    const result = await archiveColumnAction(projectId, column.id);
+                    if (!result.error) router.refresh();
                   })
                 }
               >

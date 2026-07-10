@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
+import { useRouter } from 'next/navigation';
 import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,6 +12,7 @@ export function AddColumnForm({ projectId }: { projectId: string }) {
   const [name, setName] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const router = useRouter();
 
   const submit = () => {
     const trimmed = name.trim();
@@ -26,6 +28,7 @@ export function AddColumnForm({ projectId }: { projectId: string }) {
       }
       setName('');
       setIsOpen(false);
+      router.refresh();
     });
   };
 

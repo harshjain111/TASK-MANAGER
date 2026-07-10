@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
+import { useRouter } from 'next/navigation';
 import { useForm, Controller, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Plus, X } from 'lucide-react';
@@ -31,6 +32,7 @@ export function CreateTaskDialog({
   const [serverError, setServerError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const [newChecklistLabel, setNewChecklistLabel] = useState('');
+  const router = useRouter();
 
   const {
     register,
@@ -84,6 +86,7 @@ export function CreateTaskDialog({
         priority: 'medium',
         checklist: [],
       });
+      router.refresh();
     });
   };
 

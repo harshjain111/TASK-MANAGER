@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
+import { useRouter } from 'next/navigation';
 import { Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,6 +11,7 @@ export function QuickTaskInput({ projectId, columnId }: { projectId: string; col
   const [isOpen, setIsOpen] = useState(false);
   const [title, setTitle] = useState('');
   const [isPending, startTransition] = useTransition();
+  const router = useRouter();
 
   const submit = () => {
     const trimmed = title.trim();
@@ -18,9 +20,10 @@ export function QuickTaskInput({ projectId, columnId }: { projectId: string; col
       return;
     }
     startTransition(async () => {
-      await createQuickTaskAction(projectId, { columnId, title: trimmed });
+      const result = await createQuickTaskAction(projectId, { columnId, title: trimmed });
       setTitle('');
       setIsOpen(false);
+      if (!result.error) router.refresh();
     });
   };
 

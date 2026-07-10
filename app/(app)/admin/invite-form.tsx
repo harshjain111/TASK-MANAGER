@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
+import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { inviteSchema, type InviteInput } from '@/lib/validations/invite';
@@ -13,6 +14,7 @@ export function InviteForm() {
   const [serverError, setServerError] = useState<string | null>(null);
   const [inviteLink, setInviteLink] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const router = useRouter();
 
   const {
     register,
@@ -34,6 +36,7 @@ export function InviteForm() {
       } else {
         setInviteLink(result.inviteLink ?? null);
         reset({ email: '', role: 'employee' });
+        router.refresh();
       }
     });
   };

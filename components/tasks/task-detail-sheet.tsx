@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useTransition } from 'react';
+import { useRouter } from 'next/navigation';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -32,6 +33,7 @@ export function TaskDetailSheet({
   const [detail, setDetail] = useState<TaskDetail | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [, startTransition] = useTransition();
+  const router = useRouter();
 
   useEffect(() => {
     if (!taskId) {
@@ -48,7 +50,8 @@ export function TaskDetailSheet({
   const saveField = (fields: Parameters<typeof updateTaskDetailsAction>[2]) => {
     if (!taskId) return;
     startTransition(async () => {
-      await updateTaskDetailsAction(projectId, taskId, fields);
+      const result = await updateTaskDetailsAction(projectId, taskId, fields);
+      if (!result.error) router.refresh();
     });
   };
 
@@ -122,7 +125,12 @@ export function TaskDetailSheet({
                   value={detail.assigneeIds}
                   onChange={(next) => {
                     setDetail((prev) => (prev ? { ...prev, assigneeIds: next } : prev));
-                    if (taskId) void updateAssigneesAction(projectId, taskId, next);
+                    if (taskId) {
+                      startTransition(async () => {
+                        const result = await updateAssigneesAction(projectId, taskId, next);
+                        if (!result.error) router.refresh();
+                      });
+                    }
                   }}
                 />
               </div>

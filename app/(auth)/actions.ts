@@ -20,16 +20,35 @@ export async function signInAction(input: LoginInput, inviteToken?: string): Pro
       return { error: error.message };
     }
 
-    // Covers the "email confirmation required" detour: an invited user who
-    // signed up, had no session yet (see signUpAction), confirmed via email,
-    // and is now logging in for the first time with the invite link's token
-    // still attached.
+    // Covers the "email confirmation required" detour: a user who signed up,
+    // had no session yet (see signUpAction), confirmed via email, and is now
+    // logging in for the first time — invite acceptance or org bootstrap
+    // (whichever signUpAction couldn't finish without a session) happens here.
     if (inviteToken) {
       const { error: acceptError } = await supabase.rpc('accept_org_invite', {
         invite_token: inviteToken,
       });
       if (acceptError) {
         return { error: acceptError.message };
+      }
+    } else {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      const pendingOrgName = user?.user_metadata?.org_name as string | undefined;
+      if (user && pendingOrgName) {
+        const { count } = await supabase
+          .from('org_members')
+          .select('org_id', { count: 'exact', head: true })
+          .eq('user_id', user.id);
+        if (!count) {
+          const { error: rpcError } = await supabase.rpc('create_organization', {
+            org_name: pendingOrgName,
+          });
+          if (rpcError) {
+            return { error: rpcError.message };
+          }
+        }
       }
     }
   } catch {
@@ -51,7 +70,10 @@ export async function signUpAction(input: SignupInput): Promise<ActionResult> {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { full_name: fullName } },
+      // org_name rides along in user_metadata so signInAction can finish the
+      // org-bootstrap RPC on first login if "Confirm email" delays the
+      // session past this request (see the comment below and in signInAction).
+      options: { data: { full_name: fullName, ...(inviteToken ? {} : { org_name: orgName }) } },
     });
 
     if (error) {

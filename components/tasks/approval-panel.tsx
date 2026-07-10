@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
+import { useRouter } from 'next/navigation';
 import { Check, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -23,11 +24,15 @@ export function ApprovalPanel({
   const [comment, setComment] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const router = useRouter();
 
   const approve = () => {
     startTransition(async () => {
       const result = await approveTaskAction(projectId, taskId);
-      if (!result.error) onResolved('done');
+      if (!result.error) {
+        onResolved('done');
+        router.refresh();
+      }
     });
   };
 
@@ -40,6 +45,7 @@ export function ApprovalPanel({
         return;
       }
       onResolved('in_progress');
+      router.refresh();
     });
   };
 
