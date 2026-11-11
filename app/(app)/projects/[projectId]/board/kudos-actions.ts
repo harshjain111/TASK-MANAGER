@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import type { KudosKind } from '@/types/domain';
+import { toUserMessage } from '@/lib/utils/action-error';
 
 type ActionResult = { error: string | null };
 
@@ -31,7 +32,7 @@ export async function giveKudosAction(
       to_user_id: toUserId,
       kind,
     });
-    if (error) return { error: error.message };
+    if (error) return { error: toUserMessage(error) };
 
     const { data: task } = await supabase.from('tasks').select('title').eq('id', taskId).maybeSingle();
     const emoji = kind === 'clap' ? '👏' : kind === 'star' ? '⭐' : '🙌';

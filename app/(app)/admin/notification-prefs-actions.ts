@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
+import { toUserMessage } from '@/lib/utils/action-error';
 
 export async function getDigestOptOutAction(): Promise<boolean> {
   try {
@@ -35,7 +36,7 @@ export async function setDigestOptOutAction(optOut: boolean): Promise<{ error: s
       .update({ digest_opt_out: optOut })
       .eq('id', user.id);
 
-    if (error) return { error: error.message };
+    if (error) return { error: toUserMessage(error) };
     revalidatePath('/admin');
     return { error: null };
   } catch {

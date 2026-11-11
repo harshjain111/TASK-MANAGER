@@ -1,8 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { getCurrentOrgMembership } from '@/lib/supabase/org';
 import { ComingSoon } from '@/components/shared/coming-soon';
-import { InviteForm } from './invite-form';
-import { RevokeInviteButton } from './revoke-invite-button';
+import { CreateUserForm } from './create-user-form';
 import { DigestToggle } from './digest-toggle';
 import { EscalationThresholdForm } from './escalation-threshold-form';
 import { OrgProfileForm } from './org-profile-form';
@@ -24,20 +23,13 @@ export default async function AdminPage() {
 
   const isOwnerOrAdmin = ['owner', 'admin'].includes(membership.role);
 
-  let invites: { id: string; email: string; org_role: string; expires_at: string }[] = [];
   let escalationThresholdHours = 24;
   let orgMembers: Awaited<ReturnType<typeof getOrgMembersAction>> = [];
   let archivableProjects: Awaited<ReturnType<typeof getArchivableProjectsAction>> = [];
 
   if (isOwnerOrAdmin) {
     const supabase = createClient();
-    const [{ data: invitesData }, { data: org }, members, projects] = await Promise.all([
-      supabase
-        .from('org_invites')
-        .select('id, email, org_role, expires_at, created_at')
-        .eq('org_id', membership.orgId)
-        .is('accepted_at', null)
-        .order('created_at', { ascending: false }),
+    const [{ data: org }, members, projects] = await Promise.all([
       supabase
         .from('organizations')
         .select('escalation_threshold_hours')
@@ -46,7 +38,6 @@ export default async function AdminPage() {
       getOrgMembersAction(),
       getArchivableProjectsAction(),
     ]);
-    invites = invitesData ?? [];
     escalationThresholdHours = org?.escalation_threshold_hours ?? 24;
     orgMembers = members;
     archivableProjects = projects;
@@ -82,29 +73,12 @@ export default async function AdminPage() {
           </section>
 
           <section className="rounded-xl border border-border bg-card p-4">
-            <h2 className="mb-3 text-sm font-semibold text-foreground">Invite teammate</h2>
-            <InviteForm />
-          </section>
-
-          <section className="rounded-xl border border-border bg-card p-4">
-            <h2 className="mb-3 text-sm font-semibold text-foreground">Pending invites</h2>
-            {invites.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No pending invites.</p>
-            ) : (
-              <ul className="flex flex-col divide-y divide-border">
-                {invites.map((invite) => (
-                  <li key={invite.id} className="flex items-center justify-between py-2">
-                    <div>
-                      <p className="text-sm text-foreground">{invite.email}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {invite.org_role} · expires {new Date(invite.expires_at).toLocaleDateString()}
-                      </p>
-                    </div>
-                    <RevokeInviteButton inviteId={invite.id} />
-                  </li>
-                ))}
-              </ul>
-            )}
+            <h2 className="mb-3 text-sm font-semibold text-foreground">Create teammate account</h2>
+            <p className="mb-3 text-xs text-muted-foreground">
+              Only admins can create accounts — set a name, email, and temp password, then share
+              the credentials with the new teammate directly.
+            </p>
+            <CreateUserForm />
           </section>
 
           <section className="rounded-xl border border-destructive/40 bg-card p-4">

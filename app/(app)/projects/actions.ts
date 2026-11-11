@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import { createProjectSchema, type CreateProjectInput } from '@/lib/validations/project';
+import { toUserMessage } from '@/lib/utils/action-error';
 
 type ActionResult = { error: string | null; projectId?: string };
 
@@ -21,7 +22,7 @@ export async function createProjectAction(input: CreateProjectInput): Promise<Ac
     });
 
     if (error) {
-      return { error: error.message };
+      return { error: toUserMessage(error) };
     }
 
     revalidatePath('/projects');

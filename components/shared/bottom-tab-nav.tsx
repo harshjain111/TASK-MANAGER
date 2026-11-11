@@ -6,7 +6,7 @@ import { Home, ListChecks, KanbanSquare, Trophy } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 // Mobile degrades to exactly these four tabs (CLAUDE.md §5) — the full
-// eight-item rail (Karmas/Team/Reports/Admin included) is desktop-only.
+// eight-item rail (Recurring Tasks/Team/Reports/Admin included) is desktop-only.
 const TABS = [
   { href: '/home', label: 'Home', icon: Home },
   { href: '/tasks', label: 'Tasks', icon: ListChecks },
@@ -28,6 +28,7 @@ export function BottomTabNav() {
           <Link
             key={href}
             href={href}
+            aria-current={active ? 'page' : undefined}
             className={cn(
               'flex flex-1 flex-col items-center justify-center gap-0.5 py-1.5 text-[10px] font-medium text-muted-foreground',
               active && 'text-primary',

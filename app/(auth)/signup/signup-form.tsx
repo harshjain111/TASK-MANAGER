@@ -10,15 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
-type InviteDetails = { org_name: string; org_role: string; email: string };
-
-export function SignupForm({
-  inviteToken,
-  invite,
-}: {
-  inviteToken?: string;
-  invite?: InviteDetails;
-}) {
+export function SignupForm() {
   const [serverError, setServerError] = useState<string | null>(null);
   const [checkEmail, setCheckEmail] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -27,10 +19,7 @@ export function SignupForm({
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm<SignupInput>({
-    resolver: zodResolver(signupSchema),
-    defaultValues: { inviteToken, email: invite?.email },
-  });
+  } = useForm<SignupInput>({ resolver: zodResolver(signupSchema) });
 
   const onSubmit = (input: SignupInput) => {
     setServerError(null);
@@ -44,8 +33,6 @@ export function SignupForm({
     });
   };
 
-  const loginHref = inviteToken ? `/login?invite=${inviteToken}` : '/login';
-
   if (checkEmail) {
     return (
       <div className="flex flex-col items-center gap-2 text-center">
@@ -53,7 +40,7 @@ export function SignupForm({
         <p className="text-sm text-muted-foreground">
           We sent you a confirmation link. Click it, then come back and log in.
         </p>
-        <Link href={loginHref} className="mt-2 text-sm font-medium text-primary hover:underline">
+        <Link href="/login" className="mt-2 text-sm font-medium text-primary hover:underline">
           Back to login
         </Link>
       </div>
@@ -61,43 +48,31 @@ export function SignupForm({
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4" noValidate>
+    <form method="post" onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4" noValidate>
       <div>
-        <h1 className="text-lg font-semibold text-foreground">
-          {invite ? `Join ${invite.org_name}` : 'Create your organization'}
-        </h1>
+        <h1 className="text-lg font-semibold text-foreground">Create your organization</h1>
         <p className="text-sm text-muted-foreground">
-          {invite
-            ? `You've been invited to join as ${invite.org_role}.`
-            : 'Start with a new Flowdesk workspace for your org.'}
+          Start with a new Flowdesk workspace for your org. Adding teammates after this is
+          admin-only, from Admin settings.
         </p>
       </div>
 
-      {!inviteToken && (
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="orgName">Organization name</Label>
-          <Input id="orgName" placeholder="e.g. All India Cafe Group" {...register('orgName')} />
-          {errors.orgName && <p className="text-xs text-destructive">{errors.orgName.message}</p>}
-        </div>
-      )}
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="orgName">Organization name</Label>
+        <Input id="orgName" placeholder="e.g. All India Cafe Group" {...register('orgName')} />
+        {errors.orgName && <p role="alert" className="text-xs text-destructive">{errors.orgName.message}</p>}
+      </div>
 
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="fullName">Your name</Label>
         <Input id="fullName" autoComplete="name" {...register('fullName')} />
-        {errors.fullName && <p className="text-xs text-destructive">{errors.fullName.message}</p>}
+        {errors.fullName && <p role="alert" className="text-xs text-destructive">{errors.fullName.message}</p>}
       </div>
 
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="email">Email</Label>
-        <Input
-          id="email"
-          type="email"
-          autoComplete="email"
-          readOnly={!!invite}
-          className={invite ? 'bg-muted text-muted-foreground' : undefined}
-          {...register('email')}
-        />
-        {errors.email && <p className="text-xs text-destructive">{errors.email.message}</p>}
+        <Input id="email" type="email" autoComplete="email" {...register('email')} />
+        {errors.email && <p role="alert" className="text-xs text-destructive">{errors.email.message}</p>}
       </div>
 
       <div className="flex flex-col gap-1.5">
@@ -108,10 +83,10 @@ export function SignupForm({
           autoComplete="new-password"
           {...register('password')}
         />
-        {errors.password && <p className="text-xs text-destructive">{errors.password.message}</p>}
+        {errors.password && <p role="alert" className="text-xs text-destructive">{errors.password.message}</p>}
       </div>
 
-      {serverError && <p className="text-sm text-destructive">{serverError}</p>}
+      {serverError && <p role="alert" className="text-sm text-destructive">{serverError}</p>}
 
       <Button type="submit" disabled={isPending} className="mt-2">
         {isPending ? 'Creating account…' : 'Sign up'}
@@ -119,7 +94,7 @@ export function SignupForm({
 
       <p className="text-center text-sm text-muted-foreground">
         Already have an account?{' '}
-        <Link href={loginHref} className="font-medium text-primary hover:underline">
+        <Link href="/login" className="font-medium text-primary hover:underline">
           Log in
         </Link>
       </p>

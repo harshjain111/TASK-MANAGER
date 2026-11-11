@@ -15,6 +15,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { AssigneePicker, type PickableMember } from './assignee-picker';
@@ -101,13 +102,16 @@ export function CreateTaskDialog({
       <DialogContent>
         <DialogHeader>
           <DialogTitle>New task</DialogTitle>
+          <DialogDescription>
+            Adds a task to this column. Assignees are notified once it is created.
+          </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit(onSubmit)} className="flex max-h-[70vh] flex-col gap-4 overflow-auto" noValidate>
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="task-title">Title</Label>
             <Input id="task-title" {...register('title')} />
-            {errors.title && <p className="text-xs text-destructive">{errors.title.message}</p>}
+            {errors.title && <p role="alert" className="text-xs text-destructive">{errors.title.message}</p>}
           </div>
 
           <div className="flex flex-col gap-1.5">
@@ -192,7 +196,7 @@ export function CreateTaskDialog({
             </div>
           </div>
 
-          {serverError && <p className="text-sm text-destructive">{serverError}</p>}
+          {serverError && <p role="alert" className="text-sm text-destructive">{serverError}</p>}
 
           <Button type="submit" disabled={isPending}>
             {isPending ? 'Creating…' : 'Create task'}

@@ -28,7 +28,7 @@ export function OrgProfileForm({ orgId, initialName }: { orgId: string; initialN
         Save
       </Button>
       {saved && <span className="text-xs text-status-done">Saved</span>}
-      {error && <span className="text-xs text-destructive">{error}</span>}
+      {error && <span role="alert" className="text-xs text-destructive">{error}</span>}
     </div>
   );
 }

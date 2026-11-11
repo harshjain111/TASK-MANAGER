@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
-export function LoginForm({ inviteToken }: { inviteToken?: string }) {
+export function LoginForm() {
   const [serverError, setServerError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -23,13 +23,13 @@ export function LoginForm({ inviteToken }: { inviteToken?: string }) {
   const onSubmit = (input: LoginInput) => {
     setServerError(null);
     startTransition(async () => {
-      const result = await signInAction(input, inviteToken);
+      const result = await signInAction(input);
       if (result?.error) setServerError(result.error);
     });
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4" noValidate>
+    <form method="post" onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4" noValidate>
       <div>
         <h1 className="text-lg font-semibold text-foreground">Welcome back</h1>
         <p className="text-sm text-muted-foreground">Log in to your Flowdesk account.</p>
@@ -38,7 +38,7 @@ export function LoginForm({ inviteToken }: { inviteToken?: string }) {
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="email">Email</Label>
         <Input id="email" type="email" autoComplete="email" {...register('email')} />
-        {errors.email && <p className="text-xs text-destructive">{errors.email.message}</p>}
+        {errors.email && <p role="alert" className="text-xs text-destructive">{errors.email.message}</p>}
       </div>
 
       <div className="flex flex-col gap-1.5">
@@ -49,23 +49,21 @@ export function LoginForm({ inviteToken }: { inviteToken?: string }) {
           autoComplete="current-password"
           {...register('password')}
         />
-        {errors.password && <p className="text-xs text-destructive">{errors.password.message}</p>}
+        {errors.password && <p role="alert" className="text-xs text-destructive">{errors.password.message}</p>}
       </div>
 
-      {serverError && <p className="text-sm text-destructive">{serverError}</p>}
+      {serverError && <p role="alert" className="text-sm text-destructive">{serverError}</p>}
 
       <Button type="submit" disabled={isPending} className="mt-2">
         {isPending ? 'Logging in…' : 'Log in'}
       </Button>
 
       <p className="text-center text-sm text-muted-foreground">
-        No account?{' '}
-        <Link
-          href={inviteToken ? `/signup?invite=${inviteToken}` : '/signup'}
-          className="font-medium text-primary hover:underline"
-        >
-          Sign up
+        Setting up a brand-new organization?{' '}
+        <Link href="/signup" className="font-medium text-primary hover:underline">
+          Create one
         </Link>
+        . Otherwise, ask your admin to create your account.
       </p>
     </form>
   );

@@ -12,7 +12,7 @@ import {
   approveKarmaAction,
   reopenKarmaAction,
   type PanelKarma,
-} from '@/app/(app)/karmas/actions';
+} from '@/app/(app)/recurring-tasks/actions';
 import { MY_TASK_TABS, DELEGATED_TASK_TABS, type MyTaskTab, type DelegatedTaskTab } from '@/lib/home-tabs';
 
 function ReopenRow({ karmaId, onDone }: { karmaId: string; onDone: () => void }) {
@@ -48,7 +48,7 @@ function ReopenRow({ karmaId, onDone }: { karmaId: string; onDone: () => void })
       >
         Send
       </Button>
-      {error && <p className="text-xs text-destructive">{error}</p>}
+      {error && <p role="alert" className="text-xs text-destructive">{error}</p>}
     </div>
   );
 }

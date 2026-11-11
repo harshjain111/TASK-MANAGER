@@ -1,17 +1,25 @@
 // Fixed, accessible palette so the same person always gets the same colored
 // initials circle everywhere in the app (CLAUDE.md §5) — matches KarmaAxis's
 // pattern, which is how staff scan lists fast.
+//
+// Every swatch is paired with AVATAR_FOREGROUND (not white) and clears WCAG AA
+// 4.5:1 — measured ratios in the comments below. Indigo and violet are one
+// shade lighter than the KarmaAxis reference for exactly this reason; the hues
+// are unchanged so the scan-by-color habit still works.
 const PALETTE = [
-  '#F97066', // red
-  '#F79009', // amber
-  '#84CC16', // lime
-  '#12B76A', // green
-  '#15B8A6', // teal
-  '#0EA5E9', // sky
-  '#6366F1', // indigo
-  '#A855F7', // violet
-  '#EC4899', // pink
+  '#F97066', // red     6.25:1
+  '#F79009', // amber   7.42:1
+  '#84CC16', // lime    8.81:1
+  '#12B76A', // green   6.64:1
+  '#15B8A6', // teal    6.99:1
+  '#0EA5E9', // sky     6.28:1
+  '#818CF8', // indigo  5.83:1
+  '#C084FC', // violet  6.59:1
+  '#EC4899', // pink    4.93:1
 ] as const;
+
+/** Foreground for initials on any PALETTE swatch. White fails AA on all nine. */
+export const AVATAR_FOREGROUND = '#1A1A1A';
 
 function hashString(input: string): number {
   let hash = 0;

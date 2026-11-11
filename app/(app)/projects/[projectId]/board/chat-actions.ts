@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { sendMessageSchema, type SendMessageInput } from '@/lib/validations/chat';
 import type { MessageType } from '@/types/domain';
+import { toUserMessage } from '@/lib/utils/action-error';
 
 type ActionResult = { error: string | null };
 type ProfileRef = { full_name: string; email: string } | null;
@@ -129,7 +130,7 @@ export async function sendMessageAction(
       message_type: 'text',
     });
 
-    if (error) return { error: error.message };
+    if (error) return { error: toUserMessage(error) };
 
     // Mentions notify even past a muted column (P18) — mute only suppresses
     // badge/toast delivery, never the underlying notification row.
@@ -182,7 +183,7 @@ export async function sendAttachmentMessageAction(
       message_type: isPhoto ? 'photo' : 'file',
     });
 
-    if (error) return { error: error.message };
+    if (error) return { error: toUserMessage(error) };
     return { error: null };
   } catch {
     return { error: 'Something went wrong. Please try again.' };

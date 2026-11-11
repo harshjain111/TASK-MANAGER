@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
+import { toUserMessage } from '@/lib/utils/action-error';
 
 export async function setEscalationThresholdAction(
   orgId: string,
@@ -18,7 +19,7 @@ export async function setEscalationThresholdAction(
       .update({ escalation_threshold_hours: Math.round(hours) })
       .eq('id', orgId);
 
-    if (error) return { error: error.message };
+    if (error) return { error: toUserMessage(error) };
     revalidatePath('/admin');
     return { error: null };
   } catch {

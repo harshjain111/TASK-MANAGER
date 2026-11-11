@@ -92,7 +92,7 @@ export function AttachmentsList({
         <Paperclip className="size-3.5" />
         {isPending ? 'Uploading…' : 'Attach file'}
       </Button>
-      {error && <p className="text-xs text-destructive">{error}</p>}
+      {error && <p role="alert" className="text-xs text-destructive">{error}</p>}
     </div>
   );
 }

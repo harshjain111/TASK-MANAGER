@@ -3,10 +3,11 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { loginSchema, signupSchema, type LoginInput, type SignupInput } from '@/lib/validations/auth';
+import { toAuthMessage } from '@/lib/utils/action-error';
 
 type ActionResult = { error: string | null; needsEmailConfirmation?: boolean };
 
-export async function signInAction(input: LoginInput, inviteToken?: string): Promise<ActionResult> {
+export async function signInAction(input: LoginInput): Promise<ActionResult> {
   const parsed = loginSchema.safeParse(input);
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? 'Invalid input' };
@@ -17,37 +18,28 @@ export async function signInAction(input: LoginInput, inviteToken?: string): Pro
     const { error } = await supabase.auth.signInWithPassword(parsed.data);
 
     if (error) {
-      return { error: error.message };
+      return { error: toAuthMessage(error) };
     }
 
-    // Covers the "email confirmation required" detour: a user who signed up,
-    // had no session yet (see signUpAction), confirmed via email, and is now
-    // logging in for the first time — invite acceptance or org bootstrap
-    // (whichever signUpAction couldn't finish without a session) happens here.
-    if (inviteToken) {
-      const { error: acceptError } = await supabase.rpc('accept_org_invite', {
-        invite_token: inviteToken,
-      });
-      if (acceptError) {
-        return { error: acceptError.message };
-      }
-    } else {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      const pendingOrgName = user?.user_metadata?.org_name as string | undefined;
-      if (user && pendingOrgName) {
-        const { count } = await supabase
-          .from('org_members')
-          .select('org_id', { count: 'exact', head: true })
-          .eq('user_id', user.id);
-        if (!count) {
-          const { error: rpcError } = await supabase.rpc('create_organization', {
-            org_name: pendingOrgName,
-          });
-          if (rpcError) {
-            return { error: rpcError.message };
-          }
+    // Covers the "email confirmation required" detour: a user who signed up
+    // to create a new org, had no session yet (see signUpAction), confirmed
+    // via email, and is now logging in for the first time — the org-bootstrap
+    // RPC that signUpAction couldn't finish without a session happens here.
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    const pendingOrgName = user?.user_metadata?.org_name as string | undefined;
+    if (user && pendingOrgName) {
+      const { count } = await supabase
+        .from('org_members')
+        .select('org_id', { count: 'exact', head: true })
+        .eq('user_id', user.id);
+      if (!count) {
+        const { error: rpcError } = await supabase.rpc('create_organization', {
+          org_name: pendingOrgName,
+        });
+        if (rpcError) {
+          return { error: toAuthMessage(rpcError) };
         }
       }
     }
@@ -63,7 +55,7 @@ export async function signUpAction(input: SignupInput): Promise<ActionResult> {
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? 'Invalid input' };
   }
-  const { email, password, fullName, orgName, inviteToken } = parsed.data;
+  const { email, password, fullName, orgName } = parsed.data;
 
   try {
     const supabase = createClient();
@@ -73,35 +65,26 @@ export async function signUpAction(input: SignupInput): Promise<ActionResult> {
       // org_name rides along in user_metadata so signInAction can finish the
       // org-bootstrap RPC on first login if "Confirm email" delays the
       // session past this request (see the comment below and in signInAction).
-      options: { data: { full_name: fullName, ...(inviteToken ? {} : { org_name: orgName }) } },
+      options: { data: { full_name: fullName, org_name: orgName } },
     });
 
     if (error) {
-      return { error: error.message };
+      return { error: toAuthMessage(error) };
     }
 
     // "Confirm email" is on in Supabase Auth settings by default — no session
-    // exists yet, so we can't call org-scoped RPCs. Send the user to check
-    // their inbox; org bootstrap / invite acceptance happens on first login
-    // once the email is confirmed and a session exists (see signInAction).
+    // exists yet, so we can't call the org-scoped RPC. Send the user to check
+    // their inbox; org bootstrap happens on first login once the email is
+    // confirmed and a session exists (see signInAction).
     if (!data.session) {
       return { error: null, needsEmailConfirmation: true };
     }
 
-    if (inviteToken) {
-      const { error: acceptError } = await supabase.rpc('accept_org_invite', {
-        invite_token: inviteToken,
-      });
-      if (acceptError) {
-        return { error: acceptError.message };
-      }
-    } else {
-      const { error: rpcError } = await supabase.rpc('create_organization', {
-        org_name: orgName!,
-      });
-      if (rpcError) {
-        return { error: rpcError.message };
-      }
+    const { error: rpcError } = await supabase.rpc('create_organization', {
+      org_name: orgName,
+    });
+    if (rpcError) {
+      return { error: toAuthMessage(rpcError) };
     }
   } catch {
     return { error: 'Unable to reach the server. Please try again later.' };

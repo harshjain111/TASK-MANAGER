@@ -1,4 +1,4 @@
-import { avatarColor, initials } from '@/lib/utils/avatar-color';
+import { avatarColor, initials, AVATAR_FOREGROUND } from '@/lib/utils/avatar-color';
 import { cn } from '@/lib/utils';
 
 const SIZES = {
@@ -20,16 +20,20 @@ export function Avatar({
   className?: string;
 }) {
   return (
+    // role="img" + aria-label, not title: the visible content is initials only,
+    // so without this a screen reader announces "PS" instead of the person.
     <div
+      role="img"
+      aria-label={name}
       className={cn(
-        'flex shrink-0 items-center justify-center rounded-full font-semibold text-white',
+        'flex shrink-0 items-center justify-center rounded-full font-semibold',
         SIZES[size],
         className,
       )}
-      style={{ backgroundColor: avatarColor(seed ?? name) }}
+      style={{ backgroundColor: avatarColor(seed ?? name), color: AVATAR_FOREGROUND }}
       title={name}
     >
-      {initials(name)}
+      <span aria-hidden="true">{initials(name)}</span>
     </div>
   );
 }

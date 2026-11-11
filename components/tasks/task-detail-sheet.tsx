@@ -2,7 +2,13 @@
 
 import { useEffect, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from '@/components/ui/sheet';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { StatusPill } from '@/components/shared/status-pill';
@@ -66,6 +72,7 @@ export function TaskDetailSheet({
           <>
             <SheetHeader>
               <SheetTitle>{detail.title}</SheetTitle>
+              <SheetDescription>Task details, checklist, and discussion.</SheetDescription>
               <StatusPill status={detail.status as TaskStatus} />
             </SheetHeader>
 

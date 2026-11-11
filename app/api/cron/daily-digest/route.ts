@@ -4,8 +4,8 @@ import { getDigestCounts } from '@/lib/digest';
 import { sendEmail } from '@/lib/resend';
 
 /**
- * Daily digest email (P22) — "You have N tasks and N karmas today, N
- * overdue." Not schedulable from this codebase alone: this route is the
+ * Daily digest email (P22) — "You have N tasks and N recurring tasks today,
+ * N overdue." Not schedulable from this codebase alone: this route is the
  * target a Supabase Edge Function (or Vercel Cron) hits on a schedule once
  * deployed (P38), guarded by CRON_SECRET so it can't be triggered publicly.
  */
@@ -60,7 +60,7 @@ async function runDigest(request: NextRequest) {
         to: profile.email,
         subject: `You have ${counts.tasksToday + counts.karmasToday} things due today`,
         html: `<p>Hi ${profile.full_name || 'there'},</p>
-          <p>You have <strong>${counts.tasksToday}</strong> tasks and <strong>${counts.karmasToday}</strong> karmas due today, and <strong>${counts.overdue}</strong> overdue.</p>
+          <p>You have <strong>${counts.tasksToday}</strong> tasks and <strong>${counts.karmasToday}</strong> recurring tasks due today, and <strong>${counts.overdue}</strong> overdue.</p>
           <p><a href="${process.env.NEXT_PUBLIC_SITE_URL ?? ''}/home">Open Flowdesk</a></p>`,
       });
       sent += 1;

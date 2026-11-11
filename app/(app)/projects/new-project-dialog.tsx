@@ -19,6 +19,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Avatar } from '@/components/shared/avatar';
+import { useCreateIntent } from '@/lib/utils/create-intent';
 import { cn } from '@/lib/utils';
 
 export function NewProjectDialog({
@@ -30,6 +31,9 @@ export function NewProjectDialog({
   const [serverError, setServerError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
+
+  // Lets the global "Create" menu in the TopBar open this dialog.
+  useCreateIntent('project', () => setOpen(true));
 
   const {
     register,
@@ -82,7 +86,7 @@ export function NewProjectDialog({
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="project-name">Name</Label>
             <Input id="project-name" placeholder="e.g. All India Cafe — Koramangala" {...register('name')} />
-            {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
+            {errors.name && <p role="alert" className="text-xs text-destructive">{errors.name.message}</p>}
           </div>
 
           <div className="flex flex-col gap-1.5">
@@ -146,7 +150,7 @@ export function NewProjectDialog({
             </div>
           )}
 
-          {serverError && <p className="text-sm text-destructive">{serverError}</p>}
+          {serverError && <p role="alert" className="text-sm text-destructive">{serverError}</p>}
 
           <Button type="submit" disabled={isPending}>
             {isPending ? 'Creating…' : 'Create project'}

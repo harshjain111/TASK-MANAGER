@@ -59,7 +59,7 @@ export function AddColumnForm({ projectId }: { projectId: string }) {
         }}
         disabled={isPending}
       />
-      {error && <p className="text-xs text-destructive">{error}</p>}
+      {error && <p role="alert" className="text-xs text-destructive">{error}</p>}
       <div className="flex gap-2">
         <Button size="sm" onClick={submit} disabled={isPending}>
           Add

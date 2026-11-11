@@ -79,7 +79,7 @@ export function RewardsPanel({
             value={description}
             onChange={(e) => setDescription(e.target.value)}
           />
-          {error && <p className="text-xs text-destructive">{error}</p>}
+          {error && <p role="alert" className="text-xs text-destructive">{error}</p>}
           <Button size="sm" variant="outline" disabled={isPending} onClick={add} className="w-fit gap-1.5">
             <Plus className="size-3.5" />
             Add reward

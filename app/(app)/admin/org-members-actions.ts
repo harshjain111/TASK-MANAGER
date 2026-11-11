@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import { getCurrentOrgMembership } from '@/lib/supabase/org';
 import type { OrgRole } from '@/types/domain';
+import { toUserMessage } from '@/lib/utils/action-error';
 
 type ActionResult = { error: string | null };
 type ProfileRef = { full_name: string; email: string; digest_opt_out: boolean } | null;
@@ -51,7 +52,7 @@ export async function setOrgNameAction(orgId: string, name: string): Promise<Act
   try {
     const supabase = createClient();
     const { error } = await supabase.from('organizations').update({ name: trimmed }).eq('id', orgId);
-    if (error) return { error: error.message };
+    if (error) return { error: toUserMessage(error) };
 
     revalidatePath('/admin');
     return { error: null };
@@ -67,7 +68,7 @@ export async function updateMemberRoleAction(
   try {
     const supabase = createClient();
     const { error } = await supabase.from('org_members').update({ org_role: role }).eq('id', memberId);
-    if (error) return { error: error.message };
+    if (error) return { error: toUserMessage(error) };
 
     revalidatePath('/admin');
     return { error: null };
@@ -80,7 +81,7 @@ export async function removeMemberAction(memberId: string): Promise<ActionResult
   try {
     const supabase = createClient();
     const { error } = await supabase.from('org_members').delete().eq('id', memberId);
-    if (error) return { error: error.message };
+    if (error) return { error: toUserMessage(error) };
 
     revalidatePath('/admin');
     return { error: null };
@@ -116,7 +117,7 @@ export async function archiveProjectAction(projectId: string): Promise<ActionRes
       .from('projects')
       .update({ archived_at: new Date().toISOString() })
       .eq('id', projectId);
-    if (error) return { error: error.message };
+    if (error) return { error: toUserMessage(error) };
 
     revalidatePath('/admin');
     revalidatePath('/projects');

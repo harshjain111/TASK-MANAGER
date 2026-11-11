@@ -65,7 +65,7 @@ export function ApprovalPanel({
             onChange={(e) => setComment(e.target.value)}
             className="rounded-lg border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           />
-          {error && <p className="text-xs text-destructive">{error}</p>}
+          {error && <p role="alert" className="text-xs text-destructive">{error}</p>}
           <div className="flex gap-2">
             <Button size="sm" disabled={isPending} onClick={reopen}>
               Send & reopen

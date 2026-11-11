@@ -17,7 +17,9 @@ export const metadata: Metadata = {
 };
 
 export const viewport = {
-  themeColor: '#6366F1',
+  // sRGB of --primary, oklch(0.55 0.18 264) in app/globals.css. PWA metadata
+  // cannot read a CSS variable, so keep this in sync if the token changes.
+  themeColor: '#3969d9',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

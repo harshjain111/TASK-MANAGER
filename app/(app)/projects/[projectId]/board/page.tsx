@@ -17,9 +17,18 @@ export default async function BoardPage({ params }: { params: { projectId: strin
   let tasksByColumn: Record<string, TaskCardData[]> = {};
   let members: PickableMember[] = [];
   let canManage = false;
+  let currentUser: { userId: string; name: string } | null = null;
+  // A thrown query and a genuinely missing project are different outcomes;
+  // collapsing both into notFound() told users the board was deleted when the
+  // database was simply unreachable.
+  let loadFailed = false;
 
   try {
     const supabase = createClient();
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
     const { data: projectRow } = await supabase
       .from('projects')
@@ -149,12 +158,30 @@ export default async function BoardPage({ params }: { params: { projectId: strin
         return { userId: row.user_id, name: profile?.full_name || profile?.email || 'Unknown' };
       });
 
+      if (user) {
+        currentUser = {
+          userId: user.id,
+          name: members.find((m) => m.userId === user.id)?.name ?? 'You',
+        };
+      }
+
       canManage =
         projectMember?.project_role === 'manager' ||
         (!!membership && ['owner', 'admin'].includes(membership.role));
     }
   } catch {
-    project = null;
+    loadFailed = true;
+  }
+
+  if (loadFailed) {
+    return (
+      <div className="flex h-full flex-col items-center justify-center gap-2 p-6 text-center">
+        <h1 className="text-lg font-semibold text-foreground">Couldn&apos;t load this board</h1>
+        <p className="max-w-sm text-sm text-muted-foreground">
+          We couldn&apos;t reach the server. Check your connection and refresh the page.
+        </p>
+      </div>
+    );
   }
 
   if (!project) notFound();
@@ -188,6 +215,7 @@ export default async function BoardPage({ params }: { params: { projectId: strin
           tasksByColumn={tasksByColumn}
           members={members}
           canManage={canManage}
+          currentUser={currentUser}
         />
       </div>
     </div>

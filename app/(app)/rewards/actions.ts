@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import { getCurrentOrgMembership } from '@/lib/supabase/org';
+import { toUserMessage } from '@/lib/utils/action-error';
 
 export type LeaderboardRow = { userId: string; name: string; count: number };
 type ProfileRef = { full_name: string; email: string } | null;
@@ -143,7 +144,7 @@ export async function createRewardAction(
       created_by: membership.userId,
     });
 
-    if (error) return { error: error.message };
+    if (error) return { error: toUserMessage(error) };
     revalidatePath('/rewards');
     return { error: null };
   } catch {
@@ -155,7 +156,7 @@ export async function deleteRewardAction(rewardId: string): Promise<{ error: str
   try {
     const supabase = createClient();
     const { error } = await supabase.from('rewards').delete().eq('id', rewardId);
-    if (error) return { error: error.message };
+    if (error) return { error: toUserMessage(error) };
     revalidatePath('/rewards');
     return { error: null };
   } catch {

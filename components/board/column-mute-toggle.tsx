@@ -27,9 +27,14 @@ export function ColumnMuteToggle({
           setMuted(result.muted);
         })
       }
-      className="rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+      aria-pressed={muted}
+      className="flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
     >
-      {muted ? <BellOff className="size-3.5" /> : <Bell className="size-3.5" />}
+      {muted ? (
+        <BellOff className="size-3.5" aria-hidden="true" />
+      ) : (
+        <Bell className="size-3.5" aria-hidden="true" />
+      )}
     </button>
   );
 }

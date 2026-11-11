@@ -43,7 +43,8 @@ export function StatusPill({
       className={cn(
         'inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-2 py-0.5 text-xs font-medium',
         TEXT_CLASS[status],
-        onClick && 'cursor-pointer hover:bg-muted',
+        onClick &&
+          'cursor-pointer hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
         className,
       )}
     >

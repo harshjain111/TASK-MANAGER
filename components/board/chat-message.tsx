@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import { format } from 'date-fns';
 import { FileText } from 'lucide-react';
 import { Avatar } from '@/components/shared/avatar';
@@ -49,10 +50,17 @@ export function ChatMessage({ item }: { item: FeedItem }) {
         )}
         {item.messageType === 'photo' && item.attachmentUrl ? (
           <a href={item.attachmentUrl} target="_blank" rel="noreferrer">
-            <img
+            {/* Photo feeds are the heaviest thing this app ships to phones on
+                site — next/image gives us resizing and lazy loading. Intrinsic
+                size is unknown, so both axes stay auto to keep the real aspect
+                ratio. */}
+            <Image
               src={item.attachmentUrl}
-              alt={item.body ?? 'Photo'}
-              className="mt-1 max-h-48 rounded-lg border border-border"
+              alt={item.body ?? 'Photo attachment'}
+              width={480}
+              height={480}
+              sizes="(max-width: 640px) 90vw, 400px"
+              className="mt-1 h-auto max-h-48 w-auto rounded-lg border border-border object-contain"
             />
           </a>
         ) : item.messageType === 'file' && item.attachmentUrl ? (

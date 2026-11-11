@@ -20,7 +20,7 @@ export function DigestToggle() {
       <span className="text-foreground">
         Daily digest email
         <span className="block text-xs text-muted-foreground">
-          &ldquo;You have N tasks and N karmas today, N overdue&rdquo; — sent each morning.
+          &ldquo;You have N tasks and N recurring tasks today, N overdue&rdquo; — sent each morning.
         </span>
       </span>
       <input

@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server';
 import { createTaskSchema, quickTaskSchema, type CreateTaskInput, type QuickTaskInput } from '@/lib/validations/task';
 import { notifyTaskAssigned } from '@/lib/notifications';
 import type { TaskStatus } from '@/types/domain';
+import { toUserMessage } from '@/lib/utils/action-error';
 
 type ActionResult = { error: string | null; taskId?: string };
 
@@ -114,10 +115,10 @@ export async function createQuickTaskAction(
       .select('id')
       .single();
 
-    if (error) return { error: error.message };
+    if (error) return { error: toUserMessage(error) };
 
     const { error: assigneeError, doers } = await insertAssignees(supabase, task.id, user.id, []);
-    if (assigneeError) return { error: assigneeError.message };
+    if (assigneeError) return { error: toUserMessage(assigneeError) };
     await notifyAndLogTaskCreated(supabase, projectId, task.id, parsed.data.title, doers, user.id);
 
     revalidatePath(`/projects/${projectId}/board`);
@@ -161,7 +162,7 @@ export async function updateTaskStatusAction(
     }
 
     const { error } = await supabase.from('tasks').update({ status: appliedStatus }).eq('id', taskId);
-    if (error) return { error: error.message };
+    if (error) return { error: toUserMessage(error) };
 
     const { data: orgId } = await supabase.rpc('get_project_org_id', { check_project_id: projectId });
     if (orgId) {
@@ -207,7 +208,7 @@ export async function approveTaskAction(projectId: string, taskId: string): Prom
       .eq('id', taskId)
       .select('title')
       .single();
-    if (error) return { error: error.message };
+    if (error) return { error: toUserMessage(error) };
 
     const { data: orgId } = await supabase.rpc('get_project_org_id', { check_project_id: projectId });
     if (orgId) {
@@ -266,7 +267,7 @@ export async function reopenTaskAction(
       .eq('id', taskId)
       .select('title')
       .single();
-    if (error) return { error: error.message };
+    if (error) return { error: toUserMessage(error) };
 
     await supabase.from('chat_messages').insert({
       column_id: columnId,
@@ -329,7 +330,7 @@ export async function moveTaskAction(
       .from('tasks')
       .update({ column_id: destColumnId })
       .eq('id', movedTaskId);
-    if (columnError) return { error: columnError.message };
+    if (columnError) return { error: toUserMessage(columnError) };
 
     const updates = [
       ...destOrderedTaskIds.map((id, position) =>
@@ -344,7 +345,7 @@ export async function moveTaskAction(
 
     const results = await Promise.all(updates);
     const failed = results.find((r) => r.error);
-    if (failed?.error) return { error: failed.error.message };
+    if (failed?.error) return { error: toUserMessage(failed.error) };
 
     revalidatePath(`/projects/${projectId}/board`);
     return { error: null };
@@ -387,17 +388,17 @@ export async function createTaskAction(
       .select('id')
       .single();
 
-    if (error) return { error: error.message };
+    if (error) return { error: toUserMessage(error) };
 
     const { error: assigneeError, doers } = await insertAssignees(supabase, task.id, user.id, assigneeIds);
-    if (assigneeError) return { error: assigneeError.message };
+    if (assigneeError) return { error: toUserMessage(assigneeError) };
     await notifyAndLogTaskCreated(supabase, projectId, task.id, title, doers, user.id);
 
     if (checklist.length > 0) {
       const { error: checklistError } = await supabase.from('task_checklist_items').insert(
         checklist.map((label, position) => ({ task_id: task.id, label, position })),
       );
-      if (checklistError) return { error: checklistError.message };
+      if (checklistError) return { error: toUserMessage(checklistError) };
     }
 
     revalidatePath(`/projects/${projectId}/board`);

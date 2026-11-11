@@ -4,6 +4,7 @@ import { getRewardsAction } from './actions';
 import { LeaderboardPanel } from '@/components/rewards/leaderboard-panel';
 import { RewardsPanel } from '@/components/rewards/rewards-panel';
 import { ComingSoon } from '@/components/shared/coming-soon';
+import { LoadError } from '@/components/shared/load-error';
 
 export default async function RewardsPage() {
   const membership = await getCurrentOrgMembership();
@@ -12,12 +13,26 @@ export default async function RewardsPage() {
     return <ComingSoon title="Rewards" blurb="Sign in to an organization to see the leaderboard." />;
   }
 
-  const supabase = createClient();
-  const [{ data: projectRows }, rewards] = await Promise.all([
-    supabase.from('projects').select('id, name').is('archived_at', null),
-    getRewardsAction(),
-  ]);
-  const projects = projectRows ?? [];
+  // Unguarded, a failed query here produced a 500 rather than a readable screen.
+  let projects: { id: string; name: string }[] = [];
+  let rewards: Awaited<ReturnType<typeof getRewardsAction>>;
+  try {
+    const supabase = createClient();
+    const [{ data: projectRows }, rewardRows] = await Promise.all([
+      supabase.from('projects').select('id, name').is('archived_at', null),
+      getRewardsAction(),
+    ]);
+    projects = projectRows ?? [];
+    rewards = rewardRows;
+  } catch {
+    return (
+      <LoadError
+        title="Couldn't load rewards"
+        blurb="We couldn't reach the server. Check your connection and refresh the page."
+      />
+    );
+  }
+
   const isAdmin = ['owner', 'admin'].includes(membership.role);
 
   return (

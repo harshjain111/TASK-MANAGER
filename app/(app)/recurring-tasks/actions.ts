@@ -6,6 +6,7 @@ import { getCurrentOrgMembership } from '@/lib/supabase/org';
 import { createKarmaSchema, type CreateKarmaInput } from '@/lib/validations/karma';
 import type { MyTaskTab, DelegatedTaskTab } from '@/lib/home-tabs';
 import type { TaskStatus } from '@/types/domain';
+import { toUserMessage } from '@/lib/utils/action-error';
 
 type ActionResult = { error: string | null };
 
@@ -46,9 +47,9 @@ export async function createKarmaAction(input: CreateKarmaInput): Promise<Action
       due_at: rest.dueAt,
     });
 
-    if (error) return { error: error.message };
+    if (error) return { error: toUserMessage(error) };
 
-    revalidatePath('/karmas');
+    revalidatePath('/recurring-tasks');
     revalidatePath('/home');
     return { error: null };
   } catch {
@@ -140,7 +141,7 @@ export async function updateKarmaStatusAction(
       .eq('id', karmaId)
       .select('title, org_id')
       .single();
-    if (error) return { error: error.message };
+    if (error) return { error: toUserMessage(error) };
 
     await supabase.from('activity_log').insert({
       org_id: karma.org_id,
@@ -160,7 +161,7 @@ export async function updateKarmaStatusAction(
       });
     }
 
-    revalidatePath('/karmas');
+    revalidatePath('/recurring-tasks');
     revalidatePath('/home');
     return { error: null, appliedStatus };
   } catch {
@@ -182,7 +183,7 @@ export async function approveKarmaAction(karmaId: string): Promise<ActionResult>
       .eq('id', karmaId)
       .select('title, org_id, user_id')
       .single();
-    if (error) return { error: error.message };
+    if (error) return { error: toUserMessage(error) };
 
     await supabase.from('activity_log').insert({
       org_id: karma.org_id,
@@ -202,7 +203,7 @@ export async function approveKarmaAction(karmaId: string): Promise<ActionResult>
       });
     }
 
-    revalidatePath('/karmas');
+    revalidatePath('/recurring-tasks');
     revalidatePath('/home');
     return { error: null };
   } catch {
@@ -212,7 +213,7 @@ export async function approveKarmaAction(karmaId: string): Promise<ActionResult>
 
 export async function reopenKarmaAction(karmaId: string, comment: string): Promise<ActionResult> {
   const trimmed = comment.trim();
-  if (!trimmed) return { error: 'A comment is required when reopening a karma.' };
+  if (!trimmed) return { error: 'A comment is required when reopening a recurring task.' };
 
   try {
     const supabase = createClient();
@@ -227,7 +228,7 @@ export async function reopenKarmaAction(karmaId: string, comment: string): Promi
       .eq('id', karmaId)
       .select('title, org_id, user_id')
       .single();
-    if (error) return { error: error.message };
+    if (error) return { error: toUserMessage(error) };
 
     await supabase.from('activity_log').insert({
       org_id: karma.org_id,
@@ -247,7 +248,7 @@ export async function reopenKarmaAction(karmaId: string, comment: string): Promi
       });
     }
 
-    revalidatePath('/karmas');
+    revalidatePath('/recurring-tasks');
     revalidatePath('/home');
     return { error: null };
   } catch {

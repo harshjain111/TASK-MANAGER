@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import { columnNameSchema } from '@/lib/validations/board';
+import { toUserMessage } from '@/lib/utils/action-error';
 
 type ActionResult = { error: string | null };
 
@@ -29,7 +30,7 @@ export async function createColumnAction(projectId: string, name: string): Promi
       .from('board_columns')
       .insert({ project_id: projectId, name: parsed.data.name, position: nextPosition });
 
-    if (error) return { error: error.message };
+    if (error) return { error: toUserMessage(error) };
 
     revalidatePath(`/projects/${projectId}/board`);
     return { error: null };
@@ -55,7 +56,7 @@ export async function renameColumnAction(
       .update({ name: parsed.data.name })
       .eq('id', columnId);
 
-    if (error) return { error: error.message };
+    if (error) return { error: toUserMessage(error) };
 
     revalidatePath(`/projects/${projectId}/board`);
     return { error: null };
@@ -75,7 +76,7 @@ export async function archiveColumnAction(
       .update({ archived_at: new Date().toISOString() })
       .eq('id', columnId);
 
-    if (error) return { error: error.message };
+    if (error) return { error: toUserMessage(error) };
 
     revalidatePath(`/projects/${projectId}/board`);
     return { error: null };
@@ -98,7 +99,7 @@ export async function reorderColumnsAction(
     );
 
     const failed = results.find((r) => r.error);
-    if (failed?.error) return { error: failed.error.message };
+    if (failed?.error) return { error: toUserMessage(failed.error) };
 
     revalidatePath(`/projects/${projectId}/board`);
     return { error: null };

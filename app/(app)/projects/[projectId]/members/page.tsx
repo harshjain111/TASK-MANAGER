@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { getCurrentOrgMembership, getOrgMembersForPicker } from '@/lib/supabase/org';
+import { LoadError } from '@/components/shared/load-error';
 import { MembersManager } from './members-manager';
 import type { ProjectRole } from '@/types/domain';
 
@@ -13,6 +14,8 @@ export default async function ProjectMembersPage({ params }: { params: { project
   let columns: { id: string; name: string }[] = [];
   let addableMembers: { userId: string; name: string }[] = [];
   let canManage = false;
+  // A failed query is not the same as a deleted project — see the board page.
+  let loadFailed = false;
 
   try {
     const supabase = createClient();
@@ -78,8 +81,10 @@ export default async function ProjectMembersPage({ params }: { params: { project
       addableMembers = orgMembers.filter((m) => !memberUserIds.has(m.userId));
     }
   } catch {
-    project = null;
+    loadFailed = true;
   }
+
+  if (loadFailed) return <LoadError title="Couldn't load members" />;
 
   if (!project) notFound();
 

@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import { notifyTaskAssigned } from '@/lib/notifications';
 import type { TaskPriority } from '@/types/domain';
+import { toUserMessage } from '@/lib/utils/action-error';
 
 type ActionResult = { error: string | null };
 type ProfileRef = { full_name: string; email: string } | null;
@@ -127,7 +128,7 @@ export async function updateTaskDetailsAction(
       })
       .eq('id', taskId);
 
-    if (error) return { error: error.message };
+    if (error) return { error: toUserMessage(error) };
     revalidatePath(`/projects/${projectId}/board`);
     return { error: null };
   } catch {
@@ -154,7 +155,7 @@ export async function addChecklistItemAction(
       .from('task_checklist_items')
       .insert({ task_id: taskId, label, position });
 
-    if (error) return { error: error.message };
+    if (error) return { error: toUserMessage(error) };
     revalidatePath(`/projects/${projectId}/board`);
     return { error: null };
   } catch {
@@ -174,7 +175,7 @@ export async function toggleChecklistItemAction(
       .update({ is_done: isDone })
       .eq('id', itemId);
 
-    if (error) return { error: error.message };
+    if (error) return { error: toUserMessage(error) };
     revalidatePath(`/projects/${projectId}/board`);
     return { error: null };
   } catch {
@@ -190,7 +191,7 @@ export async function removeChecklistItemAction(
     const supabase = createClient();
     const { error } = await supabase.from('task_checklist_items').delete().eq('id', itemId);
 
-    if (error) return { error: error.message };
+    if (error) return { error: toUserMessage(error) };
     revalidatePath(`/projects/${projectId}/board`);
     return { error: null };
   } catch {
@@ -210,7 +211,7 @@ export async function reorderChecklistItemsAction(
       ),
     );
     const failed = results.find((r) => r.error);
-    if (failed?.error) return { error: failed.error.message };
+    if (failed?.error) return { error: toUserMessage(failed.error) };
 
     revalidatePath(`/projects/${projectId}/board`);
     return { error: null };
@@ -237,7 +238,7 @@ export async function updateAssigneesAction(
       .delete()
       .eq('task_id', taskId)
       .eq('is_delegator', false);
-    if (deleteError) return { error: deleteError.message };
+    if (deleteError) return { error: toUserMessage(deleteError) };
 
     if (assigneeIds.length > 0) {
       const { error: insertError } = await supabase.from('task_assignees').insert(
@@ -248,7 +249,7 @@ export async function updateAssigneesAction(
           is_delegator: false,
         })),
       );
-      if (insertError) return { error: insertError.message };
+      if (insertError) return { error: toUserMessage(insertError) };
 
       const [{ data: task }, { data: orgId }] = await Promise.all([
         supabase.from('tasks').select('title').eq('id', taskId).maybeSingle(),
@@ -287,7 +288,7 @@ export async function addTaskCommentAction(
       message_type: 'text',
     });
 
-    if (error) return { error: error.message };
+    if (error) return { error: toUserMessage(error) };
     revalidatePath(`/projects/${projectId}/board`);
     return { error: null };
   } catch {
@@ -317,7 +318,7 @@ export async function addTaskAttachmentAction(
       file_size: fileSize,
     });
 
-    if (error) return { error: error.message };
+    if (error) return { error: toUserMessage(error) };
     revalidatePath(`/projects/${projectId}/board`);
     return { error: null };
   } catch {

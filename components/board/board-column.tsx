@@ -6,7 +6,7 @@ import { useSortable } from '@dnd-kit/sortable';
 import { useDroppable } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { GripVertical, MoreHorizontal, Archive, Pencil, Eye, EyeOff, MessageSquare } from 'lucide-react';
+import { GripVertical, MoreHorizontal, Archive, Pencil, Eye, EyeOff } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
   DropdownMenu,
@@ -101,12 +101,13 @@ export function BoardColumn({
       <div className="flex items-center gap-1.5 border-b border-border p-2.5">
         {canManage && (
           <button
+            type="button"
             {...attributes}
             {...listeners}
-            aria-label="Drag to reorder column"
-            className="cursor-grab text-muted-foreground hover:text-foreground active:cursor-grabbing"
+            aria-label={`Drag to reorder ${column.name}`}
+            className="flex size-6 shrink-0 cursor-grab touch-none items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:cursor-grabbing"
           >
-            <GripVertical className="size-4" />
+            <GripVertical className="size-4" aria-hidden="true" />
           </button>
         )}
 
@@ -129,8 +130,9 @@ export function BoardColumn({
           <button
             type="button"
             title="Open column chat"
+            aria-label={`${column.name} — open column chat`}
             onClick={() => onOpenChat(column.id, column.name)}
-            className="flex-1 truncate text-left text-sm font-semibold text-foreground hover:underline"
+            className="flex-1 truncate rounded-sm text-left text-sm font-semibold text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             {column.name}
           </button>
@@ -140,15 +142,9 @@ export function BoardColumn({
           {column.doneCount}/{column.totalCount}
         </span>
 
-        <button
-          type="button"
-          aria-label="Open column chat"
-          title="Open column chat"
-          onClick={() => onOpenChat(column.id, column.name)}
-          className="rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
-        >
-          <MessageSquare className="size-3.5" />
-        </button>
+        {/* The chat icon button that used to sit here duplicated the column
+            title button above — same action, same tooltip. Removing it also
+            frees the width the remaining controls need to reach 24x24. */}
 
         <ColumnMuteToggle columnId={column.id} initiallyMuted={muted} />
 
@@ -156,21 +152,27 @@ export function BoardColumn({
           type="button"
           aria-label={showDone ? 'Hide done tasks' : 'Show done tasks'}
           title={showDone ? 'Hide done tasks' : 'Show done tasks'}
+          aria-pressed={!showDone}
           onClick={() => setShowDone((v) => !v)}
-          className="rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+          className="flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
-          {showDone ? <Eye className="size-3.5" /> : <EyeOff className="size-3.5" />}
+          {showDone ? (
+            <Eye className="size-3.5" aria-hidden="true" />
+          ) : (
+            <EyeOff className="size-3.5" aria-hidden="true" />
+          )}
         </button>
 
         {canManage && !isRenaming && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button
+                type="button"
                 aria-label="Column options"
-                className="rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+                className="flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
                 disabled={isPending}
               >
-                <MoreHorizontal className="size-4" />
+                <MoreHorizontal className="size-4" aria-hidden="true" />
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">

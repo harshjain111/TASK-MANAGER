@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { getCurrentOrgMembership } from '@/lib/supabase/org';
 import { ComingSoon } from '@/components/shared/coming-soon';
+import { LoadError } from '@/components/shared/load-error';
 import { TeamDirectory, type TeamMember } from './team-directory';
 
 type ProfileRef = { full_name: string; email: string; last_active_at: string | null } | null;
@@ -13,6 +14,7 @@ export default async function TeamPage() {
   }
 
   let members: TeamMember[] = [];
+  let loadFailed = false;
   try {
     const supabase = createClient();
     const [{ data: memberRows }, { data: projectMemberRows }] = await Promise.all([
@@ -46,7 +48,17 @@ export default async function TeamPage() {
       };
     });
   } catch {
-    members = [];
+    // An empty directory and an unreachable database must not look alike.
+    loadFailed = true;
+  }
+
+  if (loadFailed) {
+    return (
+      <LoadError
+        title="Couldn't load your team"
+        blurb="We couldn't reach the server. Check your connection and refresh the page."
+      />
+    );
   }
 
   return (

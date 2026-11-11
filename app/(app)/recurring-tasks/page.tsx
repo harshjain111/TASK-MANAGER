@@ -7,7 +7,9 @@ export default async function KarmasPage() {
   const membership = await getCurrentOrgMembership();
 
   if (!membership) {
-    return <ComingSoon title="Karmas" blurb="Sign in to an organization to see your karmas." />;
+    return (
+      <ComingSoon title="Recurring Tasks" blurb="Sign in to an organization to see your recurring tasks." />
+    );
   }
 
   const orgMembers = await getOrgMembersForPicker(membership.orgId);
@@ -16,13 +18,13 @@ export default async function KarmasPage() {
   return (
     <div className="flex h-full flex-col gap-4 overflow-auto p-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-lg font-semibold text-foreground">Karmas</h1>
+        <h1 className="text-lg font-semibold text-foreground">Recurring Tasks</h1>
         <CreateKarmaDialog orgMembers={delegateOptions} />
       </div>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <KarmaPanel title="My Karmas" scope="my" />
-        <KarmaPanel title="Delegated Karmas" scope="delegated" />
+        <KarmaPanel title="My Recurring Tasks" scope="my" />
+        <KarmaPanel title="Delegated Recurring Tasks" scope="delegated" />
       </div>
     </div>
   );

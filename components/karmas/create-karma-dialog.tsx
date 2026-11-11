@@ -6,7 +6,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Plus } from 'lucide-react';
 import { createKarmaSchema, type CreateKarmaInput } from '@/lib/validations/karma';
-import { createKarmaAction } from '@/app/(app)/karmas/actions';
+import { createKarmaAction } from '@/app/(app)/recurring-tasks/actions';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -15,8 +15,10 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import { useCreateIntent } from '@/lib/utils/create-intent';
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -29,6 +31,9 @@ export function CreateKarmaDialog({
   const [serverError, setServerError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
+
+  // Lets the global "Create" menu in the TopBar open this dialog.
+  useCreateIntent('recurring', () => setOpen(true));
 
   const {
     register,
@@ -79,19 +84,22 @@ export function CreateKarmaDialog({
       <DialogTrigger asChild>
         <Button size="sm" className="gap-1.5">
           <Plus className="size-4" />
-          New Karma
+          New Recurring Task
         </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>New karma</DialogTitle>
+          <DialogTitle>New recurring task</DialogTitle>
+          <DialogDescription>
+            A recurring duty that repeats on a schedule, independent of any project.
+          </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4" noValidate>
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="karma-title">Title</Label>
             <Input id="karma-title" placeholder="e.g. Daily cash reconciliation" {...register('title')} />
-            {errors.title && <p className="text-xs text-destructive">{errors.title.message}</p>}
+            {errors.title && <p role="alert" className="text-xs text-destructive">{errors.title.message}</p>}
           </div>
 
           <div className="flex flex-col gap-1.5">
@@ -108,7 +116,7 @@ export function CreateKarmaDialog({
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="karma-due">First due date</Label>
               <Input id="karma-due" type="date" {...register('dueAt')} />
-              {errors.dueAt && <p className="text-xs text-destructive">{errors.dueAt.message}</p>}
+              {errors.dueAt && <p role="alert" className="text-xs text-destructive">{errors.dueAt.message}</p>}
             </div>
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="karma-recurrence">Repeats</Label>
@@ -179,10 +187,10 @@ export function CreateKarmaDialog({
             </div>
           )}
 
-          {serverError && <p className="text-sm text-destructive">{serverError}</p>}
+          {serverError && <p role="alert" className="text-sm text-destructive">{serverError}</p>}
 
           <Button type="submit" disabled={isPending}>
-            {isPending ? 'Creating…' : 'Create karma'}
+            {isPending ? 'Creating…' : 'Create recurring task'}
           </Button>
         </form>
       </DialogContent>

@@ -4,12 +4,18 @@ import { useEffect, useState } from 'react';
 import {
   DndContext,
   closestCenter,
+  KeyboardSensor,
   PointerSensor,
   useSensor,
   useSensors,
   type DragEndEvent,
 } from '@dnd-kit/core';
-import { SortableContext, horizontalListSortingStrategy, arrayMove } from '@dnd-kit/sortable';
+import {
+  SortableContext,
+  horizontalListSortingStrategy,
+  arrayMove,
+  sortableKeyboardCoordinates,
+} from '@dnd-kit/sortable';
 import { BoardColumn, type BoardColumnData } from './board-column';
 import { AddColumnForm } from './add-column-form';
 import { reorderColumnsAction } from '@/app/(app)/projects/[projectId]/board/actions';
@@ -27,12 +33,14 @@ export function Board({
   tasksByColumn,
   members,
   canManage,
+  currentUser,
 }: {
   projectId: string;
   columns: BoardColumnData[];
   tasksByColumn: Record<string, TaskCardData[]>;
   members: PickableMember[];
   canManage: boolean;
+  currentUser: { userId: string; name: string } | null;
 }) {
   // Local, optimistic copies — synced whenever the server (via
   // revalidatePath in the column/task actions) hands us fresh props.
@@ -47,7 +55,12 @@ export function Board({
     getMuteStateAction(projectId).then((state) => setMutedColumnIds(state.mutedColumnIds));
   }, [projectId]);
 
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
+  // The keyboard sensor is what makes the board operable without a mouse:
+  // focus a card's drag handle, Space to lift, arrows to move, Space to drop.
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
 
   const handleStatusChange = (taskId: string, next: TaskStatus | null) => {
     if (!next) return;
@@ -123,35 +136,36 @@ export function Board({
       const movedTask = tasksState[sourceColumnId]?.find((t) => t.id === taskId);
       if (!movedTask) return;
 
-      setTasksState((prev) => {
-        const next = { ...prev };
-        const source = (next[sourceColumnId] ?? []).filter((t) => t.id !== taskId);
+      // Built outside setTasksState: React double-invokes state updaters under
+      // StrictMode, so firing the server action from inside one sends the move
+      // twice in development.
+      const next = { ...tasksState };
+      const source = (next[sourceColumnId] ?? []).filter((t) => t.id !== taskId);
 
-        if (sourceColumnId === destColumnId) {
-          const overIndex = source.findIndex((t) => t.id === over.id);
-          const insertAt = overType === 'task' && overIndex !== -1 ? overIndex : source.length;
-          source.splice(insertAt, 0, movedTask);
-          next[sourceColumnId] = source;
-        } else {
-          next[sourceColumnId] = source;
-          const dest = [...(next[destColumnId] ?? [])];
-          const overIndex = dest.findIndex((t) => t.id === over.id);
-          const insertAt = overType === 'task' && overIndex !== -1 ? overIndex : dest.length;
-          dest.splice(insertAt, 0, movedTask);
-          next[destColumnId] = dest;
-        }
+      if (sourceColumnId === destColumnId) {
+        const overIndex = source.findIndex((t) => t.id === over.id);
+        const insertAt = overType === 'task' && overIndex !== -1 ? overIndex : source.length;
+        source.splice(insertAt, 0, movedTask);
+        next[sourceColumnId] = source;
+      } else {
+        next[sourceColumnId] = source;
+        const dest = [...(next[destColumnId] ?? [])];
+        const overIndex = dest.findIndex((t) => t.id === over.id);
+        const insertAt = overType === 'task' && overIndex !== -1 ? overIndex : dest.length;
+        dest.splice(insertAt, 0, movedTask);
+        next[destColumnId] = dest;
+      }
 
-        void moveTaskAction(
-          projectId,
-          taskId,
-          destColumnId,
-          next[destColumnId]!.map((t) => t.id),
-          sourceColumnId !== destColumnId ? sourceColumnId : undefined,
-          sourceColumnId !== destColumnId ? next[sourceColumnId]!.map((t) => t.id) : undefined,
-        );
+      setTasksState(next);
 
-        return next;
-      });
+      void moveTaskAction(
+        projectId,
+        taskId,
+        destColumnId,
+        next[destColumnId]!.map((t) => t.id),
+        sourceColumnId !== destColumnId ? sourceColumnId : undefined,
+        sourceColumnId !== destColumnId ? next[sourceColumnId]!.map((t) => t.id) : undefined,
+      );
     }
   };
 
@@ -201,6 +215,7 @@ export function Board({
         columnId={chatColumn?.id ?? null}
         columnName={chatColumn?.name ?? ''}
         members={members}
+        currentUser={currentUser}
         onOpenChange={(open) => !open && setChatColumn(null)}
       />
     </div>
